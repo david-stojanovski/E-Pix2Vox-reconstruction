@@ -6,8 +6,8 @@ import pandas as pd
 from natsort import natsorted
 from pyntcloud import PyntCloud
 
-from config import cfg
-from plane_extract import prepare_meshes
+from slicing.config import cfg
+from slicing.plane_extract import prepare_meshes
 
 
 def convert_vtk2np_voxels(in_mesh, vol_resolution):
