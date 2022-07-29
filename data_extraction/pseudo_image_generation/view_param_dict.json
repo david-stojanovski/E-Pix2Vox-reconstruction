@@ -1,0 +1,182 @@
+{
+  "0.png": {
+    "zoom_factor": [
+      1.0,
+      1.0
+    ],
+    "shift_x": [
+      0,
+      0
+    ],
+    "shift_y": [
+      0,
+      0
+    ],
+    "rot_angle": [
+      0,
+      0
+    ],
+    "flip_x": false,
+    "flip_y": false
+  },
+  "1.png": {
+    "zoom_factor": [
+      1.0,
+      1.0
+    ],
+    "shift_x": [
+      0,
+      0
+    ],
+    "shift_y": [
+      0,
+      0
+    ],
+    "rot_angle": [
+      0,
+      0
+    ],
+    "flip_x": false,
+    "flip_y": false
+  },
+  "2.png": {
+    "zoom_factor": [
+      1.0,
+      1.0
+    ],
+    "shift_x": [
+      0,
+      0
+    ],
+    "shift_y": [
+      0,
+      0
+    ],
+    "rot_angle": [
+      0,
+      0
+    ],
+    "flip_x": false,
+    "flip_y": false
+  },
+  "3.png": {
+    "zoom_factor": [
+      1.0,
+      1.0
+    ],
+    "shift_x": [
+      0,
+      0
+    ],
+    "shift_y": [
+      0,
+      0
+    ],
+    "rot_angle": [
+      0,
+      0
+    ],
+    "flip_x": false,
+    "flip_y": false
+  },
+  "4.png": {
+    "zoom_factor": [
+      1.0,
+      1.0
+    ],
+    "shift_x": [
+      0,
+      0
+    ],
+    "shift_y": [
+      0,
+      0
+    ],
+    "rot_angle": [
+      0,
+      0
+    ],
+    "flip_x": false,
+    "flip_y": false
+  },
+  "5.png": {
+    "zoom_factor": [
+      1.0,
+      1.0
+    ],
+    "shift_x": [
+      0,
+      0
+    ],
+    "shift_y": [
+      0,
+      0
+    ],
+    "rot_angle": [
+      0,
+      0
+    ],
+    "flip_x": false,
+    "flip_y": false
+  },
+  "6.png": {
+    "zoom_factor": [
+      1.1,
+      1.4
+    ],
+    "shift_x": [
+      -20,
+      20
+    ],
+    "shift_y": [
+      -5,
+      5
+    ],
+    "rot_angle": [
+      10,
+      20
+    ],
+    "flip_x": false,
+    "flip_y": false
+  },
+  "7.png": {
+    "zoom_factor": [
+      1.0,
+      1.0
+    ],
+    "shift_x": [
+      0,
+      0
+    ],
+    "shift_y": [
+      0,
+      0
+    ],
+    "rot_angle": [
+      0,
+      0
+    ],
+    "flip_x": false,
+    "flip_y": false
+  },
+  "8.png": {
+    "zoom_factor": [
+      1.0,
+      1.0
+    ],
+    "shift_x": [
+      0,
+      0
+    ],
+    "shift_y": [
+      0,
+      0
+    ],
+    "rot_angle": [
+      0,
+      0
+    ],
+    "flip_x": false,
+    "flip_y": true
+  }
+}
