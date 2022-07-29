@@ -28,7 +28,7 @@ def main():
     vol_resolution = 64
     #
 
-    all_data_paths = natsorted(glob.glob(os.path.join(data_folder, '*', '*.vtk')))
+    all_data_paths = natsorted(glob.glob(os.path.join(data_folder, '*.vtk')))
 
     for file in all_data_paths:
         loaded_mesh, __ = prepare_meshes(cfg, file)
