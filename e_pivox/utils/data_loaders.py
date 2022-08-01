@@ -102,7 +102,6 @@ class HeartSegDataset(torch.utils.data.dataset.Dataset):
 class HeartSegDataLoader:
     def __init__(self, cfg):
         self.dataset_taxonomy = None
-        self.binary_volumes_flag = cfg.CONST.BINARIZE_VOLUME_LABELS
         self.rendering_image_path_template = cfg.DATASETS.HEARTSEG.RENDERING_PATH
         self.volume_path_template = cfg.DATASETS.HEARTSEG.VOXEL_PATH
 
