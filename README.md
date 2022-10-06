@@ -2,19 +2,31 @@
 > Repository containing source code to implement "Efficient Pix2Vox++ for 3D Cardiac Reconstruction from 2D echo views"
 
 
-## Cite this work
-
+## Cite this work [Springer]
 ```
-@misc{https://doi.org/10.48550/arxiv.2207.13424,
-  doi = {10.48550/ARXIV.2207.13424},
-  url = {https://arxiv.org/abs/2207.13424},
-  author = {Stojanovski, David and Hermida, Uxio and Muffoletto, Marica and Lamata, Pablo and Beqiri, Arian and Gomez, Alberto},
-  keywords = {Image and Video Processing (eess.IV), Artificial Intelligence (cs.AI), Computer Vision and Pattern Recognition (cs.CV), FOS: Electrical engineering, electronic engineering, information engineering, FOS: Electrical engineering, electronic engineering, information engineering, FOS: Computer and information sciences, FOS: Computer and information sciences},
-  title = {Efficient Pix2Vox++ for 3D Cardiac Reconstruction from 2D echo views},
-  publisher = {arXiv},
-  year = {2022},
-  copyright = {Creative Commons Attribution 4.0 International}
+@InProceedings{10.1007/978-3-031-16902-1_9,
+author="Stojanovski, David
+and Hermida, Uxio
+and Muffoletto, Marica
+and Lamata, Pablo
+and Beqiri, Arian
+and Gomez, Alberto",
+editor="Aylward, Stephen
+and Noble, J. Alison
+and Hu, Yipeng
+and Lee, Su-Lin
+and Baum, Zachary
+and Min, Zhe",
+title="Efficient Pix2Vox++ for 3D Cardiac Reconstruction from 2D Echo Views",
+booktitle="Simplifying Medical Ultrasound",
+year="2022",
+publisher="Springer International Publishing",
+address="Cham",
+pages="86--95",
+abstract="Accurate geometric quantification of the human heart is a key step in the diagnosis of numerous cardiac diseases, and in the management of cardiac patients. Ultrasound imaging is the primary modality for cardiac imaging, however acquisition requires high operator skill, and its interpretation and analysis is difficult due to artifacts. Reconstructing cardiac anatomy in 3D can enable discovery of new biomarkers and make imaging less dependent on operator expertise, however most ultrasound systems only have 2D imaging capabilities. We propose both a simple alteration to the Pix2Vox++ networks for a sizeable reduction in memory usage and computational complexity, and a pipeline to perform reconstruction of 3D anatomy from 2D standard cardiac views, effectively enabling 3D anatomical reconstruction from limited 2D data. We evaluate our pipeline using synthetically generated data achieving accurate 3D whole-heart reconstructions (peak intersection over union score {\$}{\$}> 0.88{\$}{\$}>0.88) from just two standard anatomical 2D views of the heart. We also show preliminary results using real echo images.",
+isbn="978-3-031-16902-1"
 }
+
 ```
 
 ## Datasets
