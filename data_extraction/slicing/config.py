@@ -3,6 +3,10 @@ from easydict import EasyDict as edict
 __C = edict()
 cfg = __C
 
+__C.DATA_IN = edict()
+__C.DATA_IN.DATA_FOLDER = r'/folder/containing/binary/meshes/'
+__C.DATA_IN.SAVE_FOLDER = r'/folder/to/save/slices/to'
+
 #
 # Dataset Config
 #
@@ -27,7 +31,7 @@ __C.DATA_OUT.FANCY_PLOT = False
 __C.PARAMETERS = edict()
 __C.PARAMETERS.SUBSAMPLE_FACTOR = 20  # How much to subsample mesh for the low resolution, fast calculations
 __C.PARAMETERS.THRESHOLD_PERCENTAGE = 0.7  # Percentage of mesh to remove in order to speed up finding LV apex
-
+__C.PARAMETERS.NUM_WORKERS = 8  # Number of CPU cores to use for multiprocessing
 
 # The following are the labels used in the generation of the meshes from https://zenodo.org/record/4506930#.Yt_sZtLMJ1M
 # 01. LV myocardium (endo + epi)
