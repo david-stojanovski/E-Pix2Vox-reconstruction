@@ -201,7 +201,7 @@ def pad(im, pad_amount=64, locs=('top', 'bottom', 'left', 'right')):
 
 def crop_to_mask(image, mask):
     """ crop to the boundaries of the mask. mask should be bool (will be cast to bool) """
-    mask = mask.astype(np.bool)
+    mask = mask.astype(bool)
     min_r = np.where(mask == 1)[0].min()
     image = crop(image, min_r, locs=("top",))
     max_r = np.where(mask == 1)[0].max() + 1
