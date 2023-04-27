@@ -223,7 +223,7 @@ def get_img_data(in_img_path):
         out_image (numpy.ndarray), out_view_name (str): Loaded image and the corresponding name of the image.
     """
     out_image = cv2.imread(in_img_path, 0) / 255.
-    out_image = ((out_image > 0).astype(np.bool_))
+    out_image = ((out_image > 0).astype(bool))
     out_view_name = in_img_path.split(os.sep)[-1]
     return out_image, out_view_name
 
