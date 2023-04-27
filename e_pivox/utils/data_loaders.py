@@ -86,7 +86,7 @@ class HeartSegDataset(torch.utils.data.dataset.Dataset):
         elif suffix == '.npy':
             volume = np.load(volume_path)
             # if self.binary_volumes_flag == True:
-            volume = ((volume > 0).astype(np.int_)).astype(np.float32)
+            volume = ((volume > 0).astype(int)).astype(np.float32)
             # volume_indexes = np.where(volume != 0) - np.atleast_2d(np.min(np.where(volume != 0), axis=1)).T
             # volume = np.zeros((64, 64, 64))
             # volume[volume_indexes.T[:, 0], volume_indexes.T[:, 1], volume_indexes.T[:, 2]] = 1
