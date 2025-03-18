@@ -61,7 +61,7 @@ def prepare_meshes(cfg, mesh_path):
         resolution mesh and subsampled mesh.
     """
     case_mesh = pv.get_reader(mesh_path).read()
-    case_mesh = pv.wrap(case_mesh).threshold((cfg.LABELS.AORTA - 1, cfg.LABELS.AORTA + 1),
+    case_mesh = pv.wrap(case_mesh).threshold((cfg.LABELS.AORTA, cfg.LABELS.AORTA),
                                              invert=True,
                                              scalars=cfg.LABELS.LABEL_NAME,
                                              preference='cell')
