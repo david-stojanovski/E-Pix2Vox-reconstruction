@@ -1,0 +1,68 @@
+[project]
+name = "epivox"
+version = "1.0.0"
+description = "E-Pix2Vox reconstruction project"
+readme = "README.md"
+license-files = ["LICENSE"]
+authors = [{ name = "David Stojanovski", email = "07dstojanovski@gmail.com" }]
+keywords = ["3d-reconstruction", "voxel", "computer-vision", "deep-learning"]
+requires-python = ">=3.9,<=3.11"
+dependencies = [
+    "numpy>=2.3.4,<3",
+    "pandas>=2.3.3,<3",
+    "tensorboardx>=2.6.4,<3",
+    "matplotlib>=3.10.7,<4",
+    "opencv-python>=4.11.0.86,<5",
+    "scipy>=1.16.3,<2",
+    "scikit-image>=0.25.2,<0.26",
+    "imageio>=2.37.0,<3",
+    "torchvision>=0.24.0,<0.25",
+    "easydict>=1.13,<2",
+    "vtk>=9.5.2,<10",
+    "pyvista>=0.46.3,<0.47",
+    "natsort>=8.4.0,<9",
+    "pyntcloud>=0.3.1,<0.4",
+    "pillow>=12.0.0,<13",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.1.0"]
+
+[build-system]
+requires = ["setuptools>=80.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501", # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.pypi-dependencies]
+epivox = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+
+[tool.pixi.tasks]
