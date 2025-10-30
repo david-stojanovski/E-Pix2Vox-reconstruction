@@ -3,11 +3,13 @@
 import math
 from itertools import product
 
-import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image, ImageOps, ImageFilter
-from scipy.stats import multivariate_normal
+import matplotlib.pyplot as plt
+from PIL import Image
+from PIL import ImageOps
+from PIL import ImageFilter
 from mesh_utils import masking
+from scipy.stats import multivariate_normal
 
 
 def rotation_matrix(axis, theta):
@@ -54,7 +56,7 @@ def apply_single_rotation(bbox, rot):
     # Translating back:
     new_origin = origin_rotated + rot["center"]
     # Apply the rotation to all direction vectors:
-    plane_rot = {name: np.dot(rot_matrix, bbox[name]) for name, vector in bbox.items()}
+    plane_rot = {name: np.dot(rot_matrix, vector) for name, vector in bbox.items()}
     plane_rot["origin"] = new_origin
     return plane_rot
 
@@ -80,9 +82,7 @@ def apply_rotations(bbox, rotations, gen_type="product"):
             new_geometry = apply_single_rotation(new_geometry, rotation)
 
         angles = [angle["theta"] for angle in rotation_list]
-        angle_dict = {
-            rotation["name"]: angle for rotation, angle in zip(rotations, angles)
-        }
+        angle_dict = {rotation["name"]: angle for rotation, angle in zip(rotations, angles)}
 
         # Yield rotated geometry:
         yield new_geometry, angle_dict
@@ -103,13 +103,13 @@ def rotation_generator(rotations, gen_type="product"):
     if gen_type == "product":
         iterator = product(*angles_per_axis)
     elif gen_type == "zip":
-        assert min([len(a) for a in angles_per_axis]) == max(
-            [len(a) for a in angles_per_axis]
-        ), "sizes of angle arrays not consistent"
+        assert min([len(a) for a in angles_per_axis]) == max([len(a) for a in angles_per_axis]), (
+            "sizes of angle arrays not consistent"
+        )
         # print("Warning: currently not checking that size is consistent. Will be implemented.")
         iterator = zip(*angles_per_axis)
     else:
-        raise ValueError("Invalid argument to 'gent_type': {}".format(gen_type))
+        raise ValueError(f"Invalid argument to 'gent_type': {gen_type}")
 
     for angles in iterator:
         # Iterate over the combinations of angles:
@@ -122,12 +122,10 @@ def rotation_generator(rotations, gen_type="product"):
 
 
 def add_multiplicative_noise(img, downsize_factor=8):
-    """add multiplicative uniform noise to an image"""
+    """Add multiplicative uniform noise to an image"""
     img = norm_img(img, new_max=255.0)
     r, c = img.shape
-    noise = np.random.uniform(
-        0, 1, size=(int(r / downsize_factor), int(c / downsize_factor))
-    )
+    noise = np.random.uniform(0, 1, size=(int(r / downsize_factor), int(c / downsize_factor)))
     noise = resize(noise, (r, c))
     img *= noise
     img = norm_img(img, new_max=255.0)
@@ -142,19 +140,11 @@ def add_additive_noise(img, downsize_factor=8, noise_type="uniform"):
         img = norm_img(img, new_max=255.0)
     r, c = img.shape
     if noise_type == "uniform":
-        add_noise = np.random.uniform(
-            0, 100, size=(int(r / downsize_factor), int(c / downsize_factor))
-        )
-        sub_noise = np.random.uniform(
-            0, 100, size=(int(r / downsize_factor), int(c / downsize_factor))
-        )
+        add_noise = np.random.uniform(0, 100, size=(int(r / downsize_factor), int(c / downsize_factor)))
+        sub_noise = np.random.uniform(0, 100, size=(int(r / downsize_factor), int(c / downsize_factor)))
     elif noise_type == "normal":
-        add_noise = 10 * np.random.normal(
-            0, 1, size=(int(r / downsize_factor), int(c / downsize_factor))
-        )
-        sub_noise = 10 * np.random.normal(
-            0, 1, size=(int(r / downsize_factor), int(c / downsize_factor))
-        )
+        add_noise = 10 * np.random.normal(0, 1, size=(int(r / downsize_factor), int(c / downsize_factor)))
+        sub_noise = 10 * np.random.normal(0, 1, size=(int(r / downsize_factor), int(c / downsize_factor)))
     else:
         raise ValueError(f"noise type {noise_type} not recognized")
     add_noise = resize(add_noise, (r, c))
@@ -186,13 +176,10 @@ def rotate_image(image, degrees):
     return np.array(im.rotate(angle=degrees, expand=False))
 
 
-def random_pad(
-    image: np.ndarray, pad_pix: int, locs: tuple = ("top", "bottom", "left", "right")
-) -> np.ndarray:
-    """
-    pad the image on the given sides.
-     By default locs is applied to all sides.
-     Pad can be positive or negative
+def random_pad(image: np.ndarray, pad_pix: int, locs: tuple = ("top", "bottom", "left", "right")) -> np.ndarray:
+    """Pad the image on the given sides.
+    By default locs is applied to all sides.
+    Pad can be positive or negative
     """
     current_size = image.shape
     if pad_pix < 0:
@@ -219,7 +206,7 @@ def pad(im, pad_amount=64, locs=("top", "bottom", "left", "right")):
 
 
 def crop_to_mask(image, mask):
-    """crop to the boundaries of the mask. mask should be bool (will be cast to bool)"""
+    """Crop to the boundaries of the mask. mask should be bool (will be cast to bool)"""
     mask = mask.astype(bool)
     min_r = np.where(mask == 1)[0].min()
     image = crop(image, min_r, locs=("top",))
@@ -233,7 +220,7 @@ def crop_to_mask(image, mask):
 
 
 def crop(im, crop_amount, locs=("top", "bottom", "left", "right")):
-    """crop function"""
+    """Crop function"""
     if type(im) is Image.Image:
         im = np.array(im)
     if crop_amount <= 0:
@@ -250,7 +237,7 @@ def crop(im, crop_amount, locs=("top", "bottom", "left", "right")):
 
 
 def resize(im, size, resample=Image.NEAREST):
-    """resize the image to the given number of pixels"""
+    """Resize the image to the given number of pixels"""
     if type(im) is np.ndarray:
         im = Image.fromarray(im.astype(np.float32))
     height, width = size
@@ -259,7 +246,7 @@ def resize(im, size, resample=Image.NEAREST):
     return im
 
 
-def save_img(im, savename):
+def save_img(im, savename) -> None:
     if type(im) is np.ndarray:
         im = Image.fromarray(im)
     im = im.convert("L")
@@ -281,7 +268,7 @@ def gaussian_blur_img(img, blur_kernel_size=5):
 
 
 def generate_heatmap(shape, mu, sigma=None, ratio=1.0):
-    """generates a heatmap with a gaussian centered on the coordinate passed in."""
+    """Generates a heatmap with a gaussian centered on the coordinate passed in."""
     x, y = np.mgrid[0 : shape[0] : 1, 0 : shape[1] : 1]
     xy = np.column_stack([x.flat, y.flat])
     small_axis = 1 / ratio
@@ -305,19 +292,15 @@ def brightening(img, loc, brightness, sigma, row_col_ratio):
     return img
 
 
-def circle_mask(img, r, c, radius, intensity):
+def circle_mask(img, r, c, radius, intensity) -> None:
     r, c = masking.check_mask_bounds(img, r, c, radius)
-    xx, yy = np.meshgrid(
-        range(2 * int(np.ceil(radius))), range(2 * int(np.ceil(radius)))
-    )
+    xx, yy = np.meshgrid(range(2 * int(np.ceil(radius))), range(2 * int(np.ceil(radius))))
     mask = intensity * masking.get_circle_mask(xx, yy, (radius, radius), radius)
     low_r, low_c = int(np.round(r - radius)), int(np.round(c - radius))
-    img[low_r : low_r + mask.shape[0], low_c : low_c + mask.shape[1]] += mask.astype(
-        np.uint8
-    )
+    img[low_r : low_r + mask.shape[0], low_c : low_c + mask.shape[1]] += mask.astype(np.uint8)
 
 
-def show_img(img, title=None):
+def show_img(img, title=None) -> None:
     plt.imshow(img)
     if title is not None:
         plt.title(title)

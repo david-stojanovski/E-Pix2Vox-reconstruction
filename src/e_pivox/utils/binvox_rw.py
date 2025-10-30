@@ -14,9 +14,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with binvox-rw-py. If not, see <http://www.gnu.org/licenses/>.
 #
-"""
-Binvox to Numpy and back.
-
+"""Binvox to Numpy and back.
 
 >>> import numpy as np
 >>> import binvox_rw
@@ -63,7 +61,7 @@ True
 import numpy as np
 
 
-class Voxels(object):
+class Voxels:
     """Holds a binvox model.
     data is either a three-dimensional numpy boolean array (dense representation)
     or a two-dimensional numpy float array (coordinate representation).
@@ -85,7 +83,7 @@ class Voxels(object):
 
     """
 
-    def __init__(self, data, dims, translate, scale, axis_order):
+    def __init__(self, data, dims, translate, scale, axis_order) -> None:
         self.data = data
         self.dims = dims
         self.translate = translate
@@ -99,7 +97,7 @@ class Voxels(object):
         translate = self.translate[:]
         return Voxels(data, dims, translate, self.scale, self.axis_order)
 
-    def write(self, fp):
+    def write(self, fp) -> None:
         write(self, fp)
 
 
@@ -107,10 +105,10 @@ def read_header(fp):
     """Read binvox header. Mostly meant for internal use."""
     line = fp.readline().strip()
     if not line.startswith(b"#binvox"):
-        raise IOError("[ERROR] Not a binvox file")
+        raise OSError("[ERROR] Not a binvox file")
     dims = list(map(int, fp.readline().strip().split(b" ")[1:]))
     translate = list(map(float, fp.readline().strip().split(b" ")[1:]))
-    scale = list(map(float, fp.readline().strip().split(b" ")[1:]))[0]
+    scale = next(map(float, fp.readline().strip().split(b" ")[1:]))
     line = fp.readline()
     return dims, translate, scale
 
@@ -235,7 +233,7 @@ def sparse_to_dense(voxel_data, dims, dtype=bool):
 # return x*(dims[1]*dims[2]) + z*dims[1] + y
 
 
-def write(voxel_model, fp):
+def write(voxel_model, fp) -> None:
     """Write binary binvox format.
 
     Note that when saving a model in sparse (coordinate) format, it is first
@@ -246,17 +244,15 @@ def write(voxel_model, fp):
     """
     if voxel_model.data.ndim == 2:
         # TODO avoid conversion to dense
-        dense_voxel_data = sparse_to_dense(voxel_model.data, voxel_model.dims).astype(
-            int
-        )
+        dense_voxel_data = sparse_to_dense(voxel_model.data, voxel_model.dims).astype(int)
     else:
         dense_voxel_data = voxel_model.data.astype(int)
 
     file_header = [
         "#binvox 1\n",
-        "dim %s\n" % " ".join(map(str, voxel_model.dims)),
-        "translate %s\n" % " ".join(map(str, voxel_model.translate)),
-        "scale %s\n" % str(voxel_model.scale),
+        "dim {}\n".format(" ".join(map(str, voxel_model.dims))),
+        "translate {}\n".format(" ".join(map(str, voxel_model.translate))),
+        f"scale {voxel_model.scale!s}\n",
         "data\n",
     ]
 

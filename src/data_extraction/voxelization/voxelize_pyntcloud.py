@@ -1,5 +1,5 @@
-import glob
 import os
+import glob
 
 import numpy as np
 import pandas as pd
@@ -14,21 +14,18 @@ def convert_vtk2np_voxels(in_mesh, vol_resolution):
     df = pd.DataFrame(data=in_mesh.points, columns=["x", "y", "z"])
     cloud = PyntCloud(df)
 
-    voxelgrid_id = cloud.add_structure(
-        "voxelgrid", n_x=vol_resolution, n_y=vol_resolution, n_z=vol_resolution
-    )
+    voxelgrid_id = cloud.add_structure("voxelgrid", n_x=vol_resolution, n_y=vol_resolution, n_z=vol_resolution)
     voxelgrid = cloud.structures[voxelgrid_id]
     binary_voxel_array = voxelgrid.get_feature_vector(mode="binary")
     # binary_voxel_array = closing(Binary_voxel_array, cube(2))
     return binary_voxel_array
 
 
-def main():
+def main() -> None:
     # Change these values
     data_folder = r"/path/to/heart/meshes/"
     save_folder = r"/path/to/save/voxel_models/to"
     vol_resolution = 64
-    #
 
     all_data_paths = natsorted(glob.glob(os.path.join(data_folder, "*.vtk")))
 
@@ -43,7 +40,6 @@ def main():
             os.makedirs(save_path)
 
         np.save(os.path.join(save_path, "model.npy"), out_voxel_array)
-        print("Finished file:", file)
 
 
 if __name__ == "__main__":

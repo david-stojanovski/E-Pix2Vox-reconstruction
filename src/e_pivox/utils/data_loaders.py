@@ -1,21 +1,21 @@
-# -*- coding: utf-8 -*-
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
-import glob
-
-import cv2
-import json
-import numpy as np
-import logging
 import os
-import random
-import scipy.io
-import scipy.ndimage
 import sys
-import torch.utils.data.dataset
+import glob
+import json
+import random
+from enum import Enum
+from enum import unique
+from pathlib import Path
 from datetime import datetime as dt
 
-from enum import Enum, unique
+import cv2
+import numpy as np
+import scipy.io
+import scipy.ndimage
+import torch.utils.data.dataset
+from loguru import logger
 
 import utils.binvox_rw
 
@@ -27,7 +27,7 @@ class DatasetType(Enum):
     VAL = 2
 
 
-# //////////////////////////////// = End of DatasetType Class Definition = ///////////////////////////////// #
+# /////// = End of DatasetType Class Definition = ///// #
 class HeartSegDataset(torch.utils.data.dataset.Dataset):
     """ShapeNetDataset class used for PyTorch DataLoader"""
 
@@ -38,17 +38,17 @@ class HeartSegDataset(torch.utils.data.dataset.Dataset):
         n_views_rendering,
         selected_img_indexes,
         transforms=None,
-    ):
+    ) -> None:
         self.dataset_type = dataset_type
         self.file_list = file_list
         self.transforms = transforms
         self.n_views_rendering = n_views_rendering
         self.selected_img_indexes = selected_img_indexes
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.file_list)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> tuple:
         taxonomy_name, sample_name, rendering_images, volume = self.get_datum(idx)
 
         if self.transforms:
@@ -56,10 +56,10 @@ class HeartSegDataset(torch.utils.data.dataset.Dataset):
 
         return taxonomy_name, sample_name, rendering_images, volume
 
-    def set_n_views_rendering(self, n_views_rendering):
+    def set_n_views_rendering(self, n_views_rendering) -> None:
         self.n_views_rendering = n_views_rendering
 
-    def get_datum(self, idx):
+    def get_datum(self, idx: int) -> tuple:
         taxonomy_name = self.file_list[idx]["taxonomy_name"]
         sample_name = self.file_list[idx]["sample_name"]
         rendering_image_paths = self.file_list[idx]["rendering_images"]
@@ -68,29 +68,19 @@ class HeartSegDataset(torch.utils.data.dataset.Dataset):
         if self.dataset_type == DatasetType.TRAIN:
             selected_rendering_image_paths = [
                 rendering_image_paths[i]
-                for i in random.sample(
-                    range(len(rendering_image_paths)), self.n_views_rendering
-                )
+                for i in random.sample(range(len(rendering_image_paths)), self.n_views_rendering)
             ]
         else:
-            selected_rendering_image_paths = [
-                rendering_image_paths[i] for i in range(self.n_views_rendering)
-            ]
+            selected_rendering_image_paths = [rendering_image_paths[i] for i in range(self.n_views_rendering)]
 
         rendering_images = []
         for image_path in selected_rendering_image_paths:
-            rendering_image = (
-                cv2.imread(image_path, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
-            )
+            rendering_image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
             if np.shape(rendering_image)[-1] == 3:
                 rendering_image = np.swapaxes(rendering_image, 0, -1)
 
             if len(rendering_image.shape) < 3:
-                rendering_image = np.dstack(
-                    (rendering_image, rendering_image, rendering_image)
-                )
-                # logging.error('It seems that there is something wrong with the image file %s' % (image_path))
-                # sys.exit(2)
+                rendering_image = np.dstack((rendering_image, rendering_image, rendering_image))
 
             rendering_images.append(rendering_image)
         _, suffix = os.path.splitext(volume_path)
@@ -100,14 +90,10 @@ class HeartSegDataset(torch.utils.data.dataset.Dataset):
             volume = volume["Volume"].astype(np.float32)
         elif suffix == ".npy":
             volume = np.load(volume_path)
-            # if self.binary_volumes_flag == True:
             volume = ((volume > 0).astype(int)).astype(np.float32)
-            # volume_indexes = np.where(volume != 0) - np.atleast_2d(np.min(np.where(volume != 0), axis=1)).T
-            # volume = np.zeros((64, 64, 64))
-            # volume[volume_indexes.T[:, 0], volume_indexes.T[:, 1], volume_indexes.T[:, 2]] = 1
-            # volume = volume.astype(np.float32)
+
         elif suffix == ".binvox":
-            with open(volume_path, "rb") as f:
+            with Path.open(volume_path, "rb") as f:
                 volume = utils.binvox_rw.read_as_3d_array(f)
                 volume = volume.data.astype(np.float32)
 
@@ -115,27 +101,22 @@ class HeartSegDataset(torch.utils.data.dataset.Dataset):
 
 
 class HeartSegDataLoader:
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         self.dataset_taxonomy = None
         self.rendering_image_path_template = cfg.DATASETS.HEARTSEG.RENDERING_PATH
         self.volume_path_template = cfg.DATASETS.HEARTSEG.VOXEL_PATH
 
         # Load all taxonomies of the dataset
-        with open(cfg.DATASETS.HEARTSEG.TAXONOMY_FILE_PATH, encoding="utf-8") as file:
+        with Path.open(cfg.DATASETS.HEARTSEG.TAXONOMY_FILE_PATH, encoding="utf-8") as file:
             self.dataset_taxonomy = json.loads(file.read())
 
-    def get_dataset(
-        self, dataset_type, n_views_rendering, selected_img_indexes, transforms=None
-    ):
+    def get_dataset(self, dataset_type, n_views_rendering, selected_img_indexes, transforms=None):
         files = []
 
         # Load data for each category
         for taxonomy in self.dataset_taxonomy:
             taxonomy_folder_name = taxonomy["taxonomy_id"]
-            logging.info(
-                "Collecting files of Taxonomy[ID=%s, Name=%s]"
-                % (taxonomy["taxonomy_id"], taxonomy["taxonomy_name"])
-            )
+            logger.info(f"Collecting files of Taxonomy[ID={taxonomy['taxonomy_id']}, Name={taxonomy['taxonomy_name']}]")
             samples = []
             if dataset_type == DatasetType.TRAIN:
                 samples = taxonomy["train"]
@@ -146,29 +127,21 @@ class HeartSegDataLoader:
 
             files.extend(self.get_files_of_taxonomy(taxonomy_folder_name, samples))
 
-        print(
-            "[INFO] %s Complete collecting files of the dataset. Total files: %d."
-            % (dt.now(), len(files))
-        )
-        return HeartSegDataset(
-            dataset_type, files, n_views_rendering, selected_img_indexes, transforms
-        )
+        logger.info(f"[INFO] {dt.now()} Complete collecting files of the dataset. Total files: {len(files)}.")
+        return HeartSegDataset(dataset_type, files, n_views_rendering, selected_img_indexes, transforms)
 
     def get_files_of_taxonomy(self, taxonomy_folder_name, samples):
         files_of_taxonomy = []
 
-        for sample_idx, sample_name in enumerate(samples):
+        for _sample_idx, sample_name in enumerate(samples):
             # Get file path of volumes
             volume_file_path = self.volume_path_template % (
                 taxonomy_folder_name,
                 sample_name,
             )
 
-            if not os.path.exists(volume_file_path):
-                print(
-                    "[WARN] %s Ignore sample %s/%s since volume file not exists."
-                    % (dt.now(), taxonomy_folder_name, sample_name)
-                )
+            if not volume_file_path.exists():
+                logger.warning(f"Ignore sample {taxonomy_folder_name}/{sample_name} since volume file not exists.")
                 continue
 
             # Get file list of rendering images
@@ -179,10 +152,8 @@ class HeartSegDataLoader:
             rendering_images_file_path = glob.glob(img_file_path)
 
             if len(rendering_images_file_path) == 0:
-                logging.warn(
-                    "Ignore sample %s/%s since image files not exists."
-                    % (taxonomy_folder_name, sample_name)
-                )
+                logger.warning(f"Ignore sample {taxonomy_folder_name}/{sample_name} since image files not exists.")
+
                 continue
 
             # Append to the list of rendering images
@@ -201,13 +172,13 @@ class HeartSegDataLoader:
 class ShapeNetDataset(torch.utils.data.dataset.Dataset):
     """ShapeNetDataset class used for PyTorch DataLoader"""
 
-    def __init__(self, dataset_type, file_list, n_views_rendering, transforms=None):
+    def __init__(self, dataset_type, file_list, n_views_rendering, transforms=None) -> None:
         self.dataset_type = dataset_type
         self.file_list = file_list
         self.transforms = transforms
         self.n_views_rendering = n_views_rendering
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.file_list)
 
     def __getitem__(self, idx):
@@ -218,7 +189,7 @@ class ShapeNetDataset(torch.utils.data.dataset.Dataset):
 
         return taxonomy_name, sample_name, rendering_images, volume
 
-    def set_n_views_rendering(self, n_views_rendering):
+    def set_n_views_rendering(self, n_views_rendering) -> None:
         self.n_views_rendering = n_views_rendering
 
     def get_datum(self, idx):
@@ -231,26 +202,17 @@ class ShapeNetDataset(torch.utils.data.dataset.Dataset):
         if self.dataset_type == DatasetType.TRAIN:
             selected_rendering_image_paths = [
                 rendering_image_paths[i]
-                for i in random.sample(
-                    range(len(rendering_image_paths)), self.n_views_rendering
-                )
+                for i in random.sample(range(len(rendering_image_paths)), self.n_views_rendering)
             ]
         else:
-            selected_rendering_image_paths = [
-                rendering_image_paths[i] for i in range(self.n_views_rendering)
-            ]
+            selected_rendering_image_paths = [rendering_image_paths[i] for i in range(self.n_views_rendering)]
 
         rendering_images = []
         for image_path in selected_rendering_image_paths:
-            rendering_image = (
-                cv2.imread(image_path, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
-            )
+            rendering_image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
 
             if len(rendering_image.shape) < 3:
-                logging.error(
-                    "It seems that there is something wrong with the image file %s"
-                    % (image_path)
-                )
+                logger.error(f"It seems that there is something wrong with the image file {image_path}")
                 sys.exit(2)
 
             rendering_images.append(rendering_image)
@@ -262,7 +224,7 @@ class ShapeNetDataset(torch.utils.data.dataset.Dataset):
             volume = scipy.io.loadmat(volume_path)
             volume = volume["Volume"].astype(np.float32)
         elif suffix == ".binvox":
-            with open(volume_path, "rb") as f:
+            with Path.open(volume_path, "rb") as f:
                 volume = utils.binvox_rw.read_as_3d_array(f)
                 volume = volume.data.astype(np.float32)
 
@@ -273,13 +235,13 @@ class ShapeNetDataset(torch.utils.data.dataset.Dataset):
 
 
 class ShapeNetDataLoader:
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         self.dataset_taxonomy = None
-        self.rendering_image_path_template = cfg.DATASETS.SHAPENET.RENDERING_PATH
-        self.volume_path_template = cfg.DATASETS.SHAPENET.VOXEL_PATH
+        self.rendering_image_path_template = Path(cfg.DATASETS.SHAPENET.RENDERING_PATH)
+        self.volume_path_template = Path(cfg.DATASETS.SHAPENET.VOXEL_PATH)
 
         # Load all taxonomies of the dataset
-        with open(cfg.DATASETS.SHAPENET.TAXONOMY_FILE_PATH, encoding="utf-8") as file:
+        with Path.open(cfg.DATASETS.SHAPENET.TAXONOMY_FILE_PATH, encoding="utf-8") as file:
             self.dataset_taxonomy = json.loads(file.read())
 
     def get_dataset(self, dataset_type, n_views_rendering, transforms=None):
@@ -288,10 +250,7 @@ class ShapeNetDataLoader:
         # Load data for each category
         for taxonomy in self.dataset_taxonomy:
             taxonomy_folder_name = taxonomy["taxonomy_id"]
-            logging.info(
-                "Collecting files of Taxonomy[ID=%s, Name=%s]"
-                % (taxonomy["taxonomy_id"], taxonomy["taxonomy_name"])
-            )
+            logger.info(f"Collecting files of Taxonomy[ID={taxonomy['taxonomy_id']}, Name={taxonomy['taxonomy_name']}]")
             samples = []
             if dataset_type == DatasetType.TRAIN:
                 samples = taxonomy["train"]
@@ -302,25 +261,20 @@ class ShapeNetDataLoader:
 
             files.extend(self.get_files_of_taxonomy(taxonomy_folder_name, samples))
 
-        logging.info(
-            "Complete collecting files of the dataset. Total files: %d." % (len(files))
-        )
+        logger.info(f"Complete collecting files of the dataset. Total files: {len(files)}.")
         return ShapeNetDataset(dataset_type, files, n_views_rendering, transforms)
 
-    def get_files_of_taxonomy(self, taxonomy_folder_name, samples):
+    def get_files_of_taxonomy(self, taxonomy_folder_name, samples) -> list:
         files_of_taxonomy = []
 
-        for sample_idx, sample_name in enumerate(samples):
+        for _sample_idx, sample_name in enumerate(samples):
             # Get file path of volumes
             volume_file_path = self.volume_path_template % (
                 taxonomy_folder_name,
                 sample_name,
             )
-            if not os.path.exists(volume_file_path):
-                logging.warn(
-                    "Ignore sample %s/%s since volume file not exists."
-                    % (taxonomy_folder_name, sample_name)
-                )
+            if not volume_file_path.exists():
+                logger.warning(f"Ignore sample {taxonomy_folder_name}/{sample_name} since volume file not exists.")
                 continue
 
             # Get file list of rendering images
@@ -329,8 +283,8 @@ class ShapeNetDataLoader:
                 sample_name,
                 0,
             )
-            img_folder = os.path.dirname(img_file_path)
-            total_views = len(os.listdir(img_folder))
+            img_folder = Path(img_file_path).parent
+            total_views = len(list(img_folder.iterdir()))
             rendering_image_indexes = range(total_views)
             rendering_images_file_path = []
             for image_idx in rendering_image_indexes:
@@ -339,16 +293,13 @@ class ShapeNetDataLoader:
                     sample_name,
                     image_idx,
                 )
-                if not os.path.exists(img_file_path):
+                if not Path(img_file_path).exists():
                     continue
 
                 rendering_images_file_path.append(img_file_path)
 
             if len(rendering_images_file_path) == 0:
-                logging.warn(
-                    "Ignore sample %s/%s since image files not exists."
-                    % (taxonomy_folder_name, sample_name)
-                )
+                logger.warning(f"Ignore sample {taxonomy_folder_name}/{sample_name} since image files not exists.")
                 continue
 
             # Append to the list of rendering images
@@ -370,17 +321,15 @@ class ShapeNetDataLoader:
 class Pascal3dDataset(torch.utils.data.dataset.Dataset):
     """Pascal3D class used for PyTorch DataLoader"""
 
-    def __init__(self, file_list, transforms=None):
+    def __init__(self, file_list, transforms=None) -> None:
         self.file_list = file_list
         self.transforms = transforms
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.file_list)
 
-    def __getitem__(self, idx):
-        taxonomy_name, sample_name, rendering_images, volume, bounding_box = (
-            self.get_datum(idx)
-        )
+    def __getitem__(self, idx: int) -> tuple:
+        taxonomy_name, sample_name, rendering_images, volume, bounding_box = self.get_datum(idx)
 
         if self.transforms:
             rendering_images = self.transforms(rendering_images, bounding_box)
@@ -395,20 +344,14 @@ class Pascal3dDataset(torch.utils.data.dataset.Dataset):
         volume_path = self.file_list[idx]["volume"]
 
         # Get data of rendering images
-        rendering_image = (
-            cv2.imread(rendering_image_path, cv2.IMREAD_UNCHANGED).astype(np.float32)
-            / 255.0
-        )
+        rendering_image = cv2.imread(rendering_image_path, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
 
         if len(rendering_image.shape) < 3:
-            logging.warn(
-                "[WARN] %s It seems the image file %s is grayscale."
-                % (rendering_image_path)
-            )
+            logger.warning(f"{rendering_image_path} It seems the image file {rendering_image_path} is grayscale.")
             rendering_image = np.stack((rendering_image,) * 3, -1)
 
         # Get data of volume
-        with open(volume_path, "rb") as f:
+        with Path.open(volume_path, "rb") as f:
             volume = utils.binvox_rw.read_as_3d_array(f)
             volume = volume.data.astype(np.float32)
 
@@ -425,59 +368,51 @@ class Pascal3dDataset(torch.utils.data.dataset.Dataset):
 
 
 class Pascal3dDataLoader:
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         self.dataset_taxonomy = None
         self.volume_path_template = cfg.DATASETS.PASCAL3D.VOXEL_PATH
         self.annotation_path_template = cfg.DATASETS.PASCAL3D.ANNOTATION_PATH
         self.rendering_image_path_template = cfg.DATASETS.PASCAL3D.RENDERING_PATH
 
         # Load all taxonomies of the dataset
-        with open(cfg.DATASETS.PASCAL3D.TAXONOMY_FILE_PATH, encoding="utf-8") as file:
+        with Path.open(cfg.DATASETS.PASCAL3D.TAXONOMY_FILE_PATH, encoding="utf-8") as file:
             self.dataset_taxonomy = json.loads(file.read())
 
-    def get_dataset(self, dataset_type, n_views_rendering, transforms=None):
+    def get_dataset(self, dataset_type, n_views_rendering, transforms=None) -> Pascal3dDataset:
         files = []
 
         # Load data for each category
         for taxonomy in self.dataset_taxonomy:
             taxonomy_name = taxonomy["taxonomy_name"]
-            logging.info("Collecting files of Taxonomy[Name=%s]" % (taxonomy_name))
+            logger.info(f"Collecting files of Taxonomy[Name={taxonomy_name}]")
 
             samples = []
             if dataset_type == DatasetType.TRAIN:
                 samples = taxonomy["train"]
-            elif dataset_type == DatasetType.TEST:
-                samples = taxonomy["test"]
-            elif dataset_type == DatasetType.VAL:
+            elif dataset_type in (DatasetType.TEST, DatasetType.VAL):
                 samples = taxonomy["test"]
 
             files.extend(self.get_files_of_taxonomy(taxonomy_name, samples))
 
-        logging.info(
-            "Complete collecting files of the dataset. Total files: %d." % (len(files))
-        )
+        logger.info(f"Complete collecting files of the dataset. Total files: {len(files)}.")
         return Pascal3dDataset(files, transforms)
 
     def get_files_of_taxonomy(self, taxonomy_name, samples):
         files_of_taxonomy = []
 
-        for sample_idx, sample_name in enumerate(samples):
+        for _sample_idx, sample_name in enumerate(samples):
             # Get file list of rendering images
             rendering_image_file_path = self.rendering_image_path_template % (
                 taxonomy_name,
                 sample_name,
             )
-            # if not os.path.exists(rendering_image_file_path):
-            #     continue
 
             # Get image annotations
             annotations_file_path = self.annotation_path_template % (
                 taxonomy_name,
                 sample_name,
             )
-            annotations_mat = scipy.io.loadmat(
-                annotations_file_path, squeeze_me=True, struct_as_record=False
-            )
+            annotations_mat = scipy.io.loadmat(annotations_file_path, squeeze_me=True, struct_as_record=False)
             img_width, img_height, _ = annotations_mat["record"].imgsize
             annotations = annotations_mat["record"].objects
 
@@ -513,11 +448,8 @@ class Pascal3dDataLoader:
             ]
             # Get file path of volumes
             volume_file_path = self.volume_path_template % (taxonomy_name, cad_index)
-            if not os.path.exists(volume_file_path):
-                logging.warn(
-                    "Ignore sample %s/%s since volume file not exists."
-                    % (taxonomy_name, sample_name)
-                )
+            if not volume_file_path.exists():
+                logger.warning(f"Ignore sample {taxonomy_name}/{sample_name} since volume file not exists.")
                 continue
 
             # Append to the list of rendering images
@@ -540,24 +472,22 @@ class Pascal3dDataLoader:
 class Pix3dDataset(torch.utils.data.dataset.Dataset):
     """Pix3D class used for PyTorch DataLoader"""
 
-    def __init__(self, file_list, transforms=None):
+    def __init__(self, file_list, transforms=None) -> None:
         self.file_list = file_list
         self.transforms = transforms
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.file_list)
 
-    def __getitem__(self, idx):
-        taxonomy_name, sample_name, rendering_images, volume, bounding_box = (
-            self.get_datum(idx)
-        )
+    def __getitem__(self, idx: int) -> tuple:
+        taxonomy_name, sample_name, rendering_images, volume, bounding_box = self.get_datum(idx)
 
         if self.transforms:
             rendering_images = self.transforms(rendering_images, bounding_box)
 
         return taxonomy_name, sample_name, rendering_images, volume
 
-    def get_datum(self, idx):
+    def get_datum(self, idx: int) -> tuple:
         taxonomy_name = self.file_list[idx]["taxonomy_name"]
         sample_name = self.file_list[idx]["sample_name"]
         rendering_image_path = self.file_list[idx]["rendering_image"]
@@ -565,19 +495,14 @@ class Pix3dDataset(torch.utils.data.dataset.Dataset):
         volume_path = self.file_list[idx]["volume"]
 
         # Get data of rendering images
-        rendering_image = (
-            cv2.imread(rendering_image_path, cv2.IMREAD_UNCHANGED).astype(np.float32)
-            / 255.0
-        )
+        rendering_image = cv2.imread(rendering_image_path, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
 
         if len(rendering_image.shape) < 3:
-            logging.warn(
-                "It seems the image file %s is grayscale." % (rendering_image_path)
-            )
+            logger.warning(f"It seems the image file {rendering_image_path} is grayscale.")
             rendering_image = np.stack((rendering_image,) * 3, -1)
 
         # Get data of volume
-        with open(volume_path, "rb") as f:
+        with Path.open(volume_path, "rb") as f:
             volume = utils.binvox_rw.read_as_3d_array(f)
             volume = volume.data.astype(np.float32)
 
@@ -594,19 +519,19 @@ class Pix3dDataset(torch.utils.data.dataset.Dataset):
 
 
 class Pix3dDataLoader:
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         self.dataset_taxonomy = None
-        self.annotations = dict()
+        self.annotations = {}
         self.volume_path_template = cfg.DATASETS.PIX3D.VOXEL_PATH
         self.rendering_image_path_template = cfg.DATASETS.PIX3D.RENDERING_PATH
 
         # Load all taxonomies of the dataset
-        with open(cfg.DATASETS.PIX3D.TAXONOMY_FILE_PATH, encoding="utf-8") as file:
+        with Path.open(cfg.DATASETS.PIX3D.TAXONOMY_FILE_PATH, encoding="utf-8") as file:
             self.dataset_taxonomy = json.loads(file.read())
 
         # Load all annotations of the dataset
         _annotations = None
-        with open(cfg.DATASETS.PIX3D.ANNOTATION_PATH, encoding="utf-8") as file:
+        with Path.open(cfg.DATASETS.PIX3D.ANNOTATION_PATH, encoding="utf-8") as file:
             _annotations = json.loads(file.read())
 
         for anno in _annotations:
@@ -620,29 +545,25 @@ class Pix3dDataLoader:
         # Load data for each category
         for taxonomy in self.dataset_taxonomy:
             taxonomy_name = taxonomy["taxonomy_name"]
-            logging.info("Collecting files of Taxonomy[Name=%s]" % (taxonomy_name))
+            logger.info(f"Collecting files of Taxonomy[Name={taxonomy_name}]")
 
             samples = []
             if dataset_type == DatasetType.TRAIN:
                 samples = taxonomy["train"]
-            elif dataset_type == DatasetType.TEST:
-                samples = taxonomy["test"]
-            elif dataset_type == DatasetType.VAL:
+            elif dataset_type in (DatasetType.TEST, DatasetType.VAL):
                 samples = taxonomy["test"]
 
             files.extend(self.get_files_of_taxonomy(taxonomy_name, samples))
 
-        logging.info(
-            "Complete collecting files of the dataset. Total files: %d." % (len(files))
-        )
+        logger.info(f"Complete collecting files of the dataset. Total files: {len(files)}.")
         return Pix3dDataset(files, transforms)
 
     def get_files_of_taxonomy(self, taxonomy_name, samples):
         files_of_taxonomy = []
 
-        for sample_idx, sample_name in enumerate(samples):
+        for _sample_idx, sample_name in enumerate(samples):
             # Get image annotations
-            anno_key = "%s/%s" % (taxonomy_name, sample_name)
+            anno_key = f"{taxonomy_name}/{sample_name}"
             annotations = self.annotations[anno_key]
 
             # Get file list of rendering images
@@ -656,10 +577,10 @@ class Pix3dDataLoader:
             # Get the bounding box of the image
             img_width, img_height = annotations["img_size"]
             bbox = [
-                annotations['bbox'][0] / img_width,
-                annotations['bbox'][1] / img_height,
-                annotations['bbox'][2] / img_width,
-                annotations['bbox'][3] / img_height
+                annotations["bbox"][0] / img_width,
+                annotations["bbox"][1] / img_height,
+                annotations["bbox"][2] / img_width,
+                annotations["bbox"][3] / img_height
             ]  # yapf: disable
             model_name_parts = annotations["voxel"].split("/")
             model_name = model_name_parts[2]
@@ -671,11 +592,8 @@ class Pix3dDataLoader:
                 model_name,
                 volume_file_name,
             )
-            if not os.path.exists(volume_file_path):
-                logging.warn(
-                    "Ignore sample %s/%s since volume file not exists."
-                    % (taxonomy_name, sample_name)
-                )
+            if not volume_file_path.exists():
+                logger.warning(f"Ignore sample {taxonomy_name}/{sample_name} since volume file not exists.")
                 continue
 
             # Append to the list of rendering images
@@ -698,16 +616,16 @@ class Pix3dDataLoader:
 class Things3DDataset(torch.utils.data.dataset.Dataset):
     """ShapeNetDataset class used for PyTorch DataLoader"""
 
-    def __init__(self, dataset_type, file_list, n_views_rendering, transforms=None):
+    def __init__(self, dataset_type, file_list, n_views_rendering, transforms=None) -> None:
         self.dataset_type = dataset_type
         self.file_list = file_list
         self.transforms = transforms
         self.n_views_rendering = n_views_rendering
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.file_list)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
         taxonomy_name, sample_name, rendering_images, volume = self.get_datum(idx)
 
         if self.transforms:
@@ -715,7 +633,7 @@ class Things3DDataset(torch.utils.data.dataset.Dataset):
 
         return taxonomy_name, sample_name, rendering_images, volume
 
-    def get_datum(self, idx):
+    def get_datum(self, idx: int):
         taxonomy_name = self.file_list[idx]["taxonomy_name"]
         model_id = self.file_list[idx]["model_id"]
         scene_id = self.file_list[idx]["scene_id"]
@@ -726,25 +644,16 @@ class Things3DDataset(torch.utils.data.dataset.Dataset):
         if self.dataset_type == DatasetType.TRAIN:
             selected_rendering_image_paths = [
                 rendering_image_paths[i]
-                for i in random.sample(
-                    range(len(rendering_image_paths)), self.n_views_rendering
-                )
+                for i in random.sample(range(len(rendering_image_paths)), self.n_views_rendering)
             ]
         else:
-            selected_rendering_image_paths = [
-                rendering_image_paths[i] for i in range(self.n_views_rendering)
-            ]
+            selected_rendering_image_paths = [rendering_image_paths[i] for i in range(self.n_views_rendering)]
 
         rendering_images = []
         for image_path in selected_rendering_image_paths:
-            rendering_image = (
-                cv2.imread(image_path, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
-            )
+            rendering_image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
             if len(rendering_image.shape) < 3:
-                logging.error(
-                    "It seems that there is something wrong with the image file %s"
-                    % (image_path)
-                )
+                logger.error(f"It seems that there is something wrong with the image file {image_path}")
                 sys.exit(2)
 
             rendering_images.append(rendering_image)
@@ -756,11 +665,11 @@ class Things3DDataset(torch.utils.data.dataset.Dataset):
             volume = scipy.io.loadmat(volume_path)
             volume = volume["Volume"].astype(np.float32)
         elif suffix == ".binvox":
-            with open(volume_path, "rb") as f:
+            with Path.open(volume_path, "rb") as f:
                 volume = utils.binvox_rw.read_as_3d_array(f)
                 volume = volume.data.astype(np.float32)
 
-        _model_id = "%s-%s" % (model_id, scene_id)
+        _model_id = f"{model_id}-{scene_id}"
         return taxonomy_name, _model_id, np.asarray(rendering_images), volume
 
 
@@ -768,14 +677,14 @@ class Things3DDataset(torch.utils.data.dataset.Dataset):
 
 
 class Things3DDataLoader:
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         self.dataset_taxonomy = None
         self.rendering_image_path_template = cfg.DATASETS.THINGS3D.RENDERING_PATH
         self.volume_path_template = cfg.DATASETS.THINGS3D.VOXEL_PATH
         self.n_views_rendering = cfg.CONST.N_VIEWS_RENDERING
 
         # Load all taxonomies of the dataset
-        with open(cfg.DATASETS.THINGS3D.TAXONOMY_FILE_PATH, encoding="utf-8") as file:
+        with Path.open(cfg.DATASETS.THINGS3D.TAXONOMY_FILE_PATH, encoding="utf-8") as file:
             self.dataset_taxonomy = json.loads(file.read())
 
     def get_dataset(self, dataset_type, n_views_rendering, transforms=None):
@@ -784,10 +693,7 @@ class Things3DDataLoader:
         # Load data for each category
         for taxonomy in self.dataset_taxonomy:
             taxonomy_folder_name = taxonomy["taxonomy_id"]
-            logging.info(
-                "Collecting files of Taxonomy[ID=%s, Name=%s]"
-                % (taxonomy["taxonomy_id"], taxonomy["taxonomy_name"])
-            )
+            logger.info(f"Collecting files of Taxonomy[ID={taxonomy['taxonomy_id']}, Name={taxonomy['taxonomy_name']}]")
             models = []
             if dataset_type == DatasetType.TRAIN:
                 models = taxonomy["train"]
@@ -798,9 +704,7 @@ class Things3DDataLoader:
 
             files.extend(self.get_files_of_taxonomy(taxonomy_folder_name, models))
 
-        logging.info(
-            "Complete collecting files of the dataset. Total files: %d." % (len(files))
-        )
+        logger.info(f"Complete collecting files of the dataset. Total files: {len(files)}.")
         return Things3DDataset(dataset_type, files, n_views_rendering, transforms)
 
     def get_files_of_taxonomy(self, taxonomy_folder_name, models):
@@ -815,11 +719,8 @@ class Things3DDataLoader:
                 taxonomy_folder_name,
                 model_id,
             )
-            if not os.path.exists(volume_file_path):
-                logging.warn(
-                    "Ignore sample %s/%s since volume file not exists."
-                    % (taxonomy_folder_name, model_id)
-                )
+            if not volume_file_path.exists():
+                logger.warning(f"Ignore sample {taxonomy_folder_name}/{model_id} since volume file not exists.")
                 continue
 
             # Get file list of rendering images
@@ -858,9 +759,9 @@ class Things3DDataLoader:
 # /////////////////////////////// = End of Things3DDataLoader Class Definition = /////////////////////////////// #
 
 DATASET_LOADER_MAPPING = {
-    'ShapeNet': ShapeNetDataLoader,
-    'Pascal3D': Pascal3dDataLoader,
-    'Pix3D': Pix3dDataLoader,
-    'Things3D': Things3DDataLoader,
-    'HeartSeg': HeartSegDataLoader
+    "ShapeNet": ShapeNetDataLoader,
+    "Pascal3D": Pascal3dDataLoader,
+    "Pix3D": Pix3dDataLoader,
+    "Things3D": Things3DDataLoader,
+    "HeartSeg": HeartSegDataLoader
 }  # yapf: disable

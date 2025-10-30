@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
-import os
+from pathlib import Path
 
 from easydict import EasyDict as edict
 
@@ -15,25 +14,19 @@ cfg = __C
 
 __C.DATASETS = edict()
 __C.DATASETS.HEARTSEG = edict()
-__C.DATASETS.HEARTSEG.IMG_ROOT = "/home/e_pivox/datasets/heart_seg/heart_render"
-__C.DATASETS.HEARTSEG.TAXONOMY_FILE_PATH = "/home/e_pivox/datasets/HeartSeg.json"
-__C.DATASETS.HEARTSEG.RENDERING_PATH = os.path.join(
-    __C.DATASETS.HEARTSEG.IMG_ROOT, "%s/%s/*.png"
-)
-__C.DATASETS.HEARTSEG.VOXEL_PATH = (
-    "/home/e_pivox/datasets/heart_seg/voxel_volumes/%s/%s/model.npy"
-)
+__C.DATASETS.HEARTSEG.IMG_ROOT = Path("/home/e_pivox/datasets/heart_seg/heart_render")
+__C.DATASETS.HEARTSEG.TAXONOMY_FILE_PATH = Path("/home/e_pivox/datasets/HeartSeg.json")
+__C.DATASETS.HEARTSEG.RENDERING_PATH = __C.DATASETS.HEARTSEG.IMG_ROOT / "%s" / "%s" / "*.png"
+
+__C.DATASETS.HEARTSEG.VOXEL_PATH = Path("/home/e_pivox/datasets/heart_seg/voxel_volumes/%s/%s/model.npy")
 
 
-# __C.DATASETS = edict()
 __C.DATASETS.SHAPENET = edict()
-__C.DATASETS.SHAPENET.TAXONOMY_FILE_PATH = (
-    r"/home/e_pivox/datasets_shapenet/ShapeNet.json"
+__C.DATASETS.SHAPENET.TAXONOMY_FILE_PATH = Path("/home/e_pivox/datasets_shapenet/ShapeNet.json")
+__C.DATASETS.SHAPENET.RENDERING_PATH = Path(
+    "/home/e_pivox/datasets_shapenet/ShapeNet/ShapeNetRendering/%s/%s/rendering/%02d.png"
 )
-__C.DATASETS.SHAPENET.RENDERING_PATH = r"/home/e_pivox/datasets_shapenet/ShapeNet/ShapeNetRendering/%s/%s/rendering/%02d.png"
-__C.DATASETS.SHAPENET.VOXEL_PATH = (
-    r"/home/e_pivox/datasets_shapenet/ShapeNet/ShapeNetVox32/%s/%s/model.binvox"
-)
+__C.DATASETS.SHAPENET.VOXEL_PATH = Path("/home/e_pivox/datasets_shapenet/ShapeNet/ShapeNetVox32/%s/%s/model.binvox")
 #
 # Dataset
 #
@@ -42,8 +35,6 @@ __C.DATASET.MEAN = [0.5, 0.5, 0.5]
 __C.DATASET.STD = [0.5, 0.5, 0.5]
 __C.DATASET.TRAIN_DATASET = "HeartSeg"
 __C.DATASET.TEST_DATASET = "HeartSeg"
-# __C.DATASET.TRAIN_DATASET = 'ShapeNet'
-# __C.DATASET.TEST_DATASET = 'ShapeNet'
 
 
 #
@@ -59,17 +50,15 @@ __C.CONST.N_VIEWS_RENDERING = 9  # Dummy property for Pascal 3D
 __C.CONST.CROP_IMG_W = 128  # Dummy property for Pascal 3D
 __C.CONST.CROP_IMG_H = 128  # Dummy property for Pascal 3D
 __C.CONST.NUM_WORKER = 10  # number of data workers
-__C.CONST.TEST_SAVE_NUMBER = (
-    125  # number of test cases that should be saved as np arrays each epoch
-)
+__C.CONST.TEST_SAVE_NUMBER = 125  # number of test cases that should be saved as np arrays each epoch
 
 
 # Directories
 #
 __C.DIR = edict()
-__C.DIR.OUT_PATH = os.path.join(os.getcwd(), "output")
-__C.DIR.IOU_SAVE_PATH = os.path.join(__C.DIR.OUT_PATH, "iou_scores.xlsx")
-__C.DIR.RANDOM_BG_PATH = "/home/hzxie/Datasets/SUN2012/JPEGImages"
+__C.DIR.OUT_PATH = Path(Path.cwd()) / "output"
+__C.DIR.IOU_SAVE_PATH = __C.DIR.OUT_PATH / "iou_scores.xlsx"
+__C.DIR.RANDOM_BG_PATH = Path("/home/hzxie/Datasets/SUN2012/JPEGImages")
 
 #
 # Network

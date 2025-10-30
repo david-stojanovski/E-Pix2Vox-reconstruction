@@ -1,20 +1,16 @@
-# -*- coding: utf-8 -*-
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
 import json
-import logging
 from datetime import datetime as dt
 
 import numpy as np
-import pandas as pd
 import torch
-import torch.backends.cudnn
+import pandas as pd
 import torch.utils.data
-
-import utils.data_loaders
+import torch.backends.cudnn
 import utils.data_transforms
-import utils.helpers
+from loguru import logger
 from utils.average_meter import AverageMeter
 
 
@@ -29,25 +25,22 @@ def test_net(
     merger=None,
 ):
     if cfg.NETWORK.MODEL_SIZE == 32:
+        from models.merger_32 import Merger
         from models.decoder_32 import Decoder
         from models.encoder_32 import Encoder
-        from models.merger_32 import Merger
         from models.refiner_32 import Refiner
     elif cfg.NETWORK.MODEL_SIZE == 64:
+        from models.merger_64 import Merger
         from models.decoder_64 import Decoder
         from models.encoder_64 import Encoder
-        from models.merger_64 import Merger
         from models.refiner_64 import Refiner
     elif cfg.NETWORK.MODEL_SIZE == 128:
+        from models.merger_128 import Merger
         from models.decoder_128 import Decoder
         from models.encoder_128 import Encoder
-        from models.merger_128 import Merger
         from models.refiner_128 import Refiner
     else:
-        raise Exception(
-            "[FATAL] %s No model available for size: %s. voxels"
-            % (dt.now(), cfg.NETWORK.MODEL_SIZE)
-        )
+        raise Exception(f"[FATAL] {dt.now()} No model available for size: {cfg.NETWORK.MODEL_SIZE}. voxels")
 
     # Enable the inbuilt cudnn auto-tuner to find the best algorithm to use
     torch.backends.cudnn.benchmark = True
@@ -67,18 +60,12 @@ def test_net(
 
         test_transforms = utils.data_transforms.Compose(
             [
-                # utils.data_transforms.CenterCrop(IMG_SIZE, CROP_SIZE),
-                # utils.data_transforms.RandomBackground(cfg.TEST.RANDOM_BG_COLOR_RANGE),
-                utils.data_transforms.Normalize(
-                    mean=cfg.DATASET.MEAN, std=cfg.DATASET.STD
-                ),
+                utils.data_transforms.Normalize(mean=cfg.DATASET.MEAN, std=cfg.DATASET.STD),
                 utils.data_transforms.ToTensor(),
             ]
         )
 
-        dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[
-            cfg.DATASET.TEST_DATASET
-        ](cfg)
+        dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[cfg.DATASET.TEST_DATASET](cfg)
         test_data_loader = torch.utils.data.DataLoader(
             dataset=dataset_loader.get_dataset(
                 utils.data_loaders.DatasetType.TEST,
@@ -104,7 +91,7 @@ def test_net(
             refiner = torch.nn.DataParallel(refiner).cuda()
             merger = torch.nn.DataParallel(merger).cuda()
 
-        logging.info("Loading weights from %s ..." % (cfg.CONST.WEIGHTS))
+        logger.info(f"Loading weights from {cfg.CONST.WEIGHTS} ...")
         checkpoint = torch.load(cfg.CONST.WEIGHTS)
         epoch_idx = checkpoint["epoch_idx"]
         encoder.load_state_dict(checkpoint["encoder_state_dict"])
@@ -119,7 +106,7 @@ def test_net(
     loss_func = utils.helpers.get_loss_function(cfg)
     # Testing loop
     n_samples = len(test_data_loader)
-    test_iou = dict()
+    test_iou = {}
     encoder_losses = AverageMeter()
     refiner_losses = AverageMeter()
 
@@ -135,9 +122,7 @@ def test_net(
         rendering_images,
         ground_truth_volume,
     ) in enumerate(test_data_loader):
-        taxonomy_id = (
-            taxonomy_id[0] if isinstance(taxonomy_id[0], str) else taxonomy_id[0].item()
-        )
+        taxonomy_id = taxonomy_id[0] if isinstance(taxonomy_id[0], str) else taxonomy_id[0].item()
         sample_name = sample_name[0]
 
         with torch.no_grad():
@@ -155,10 +140,7 @@ def test_net(
                 generated_volume = torch.mean(generated_volume, dim=1)
             encoder_loss = loss_func(generated_volume, ground_truth_volume) * 10
 
-            if (
-                cfg.NETWORK.USE_REFINER
-                and epoch_idx >= cfg.TRAIN.EPOCH_START_USE_REFINER
-            ):
+            if cfg.NETWORK.USE_REFINER and epoch_idx >= cfg.TRAIN.EPOCH_START_USE_REFINER:
                 generated_volume = refiner(generated_volume)
                 refiner_loss = loss_func(generated_volume, ground_truth_volume) * 10
             else:
@@ -186,33 +168,24 @@ def test_net(
             if cfg.TEST.VOL_OR_RENDER_SAVE.lower() == "render":
                 if test_writer and sample_idx < cfg.CONST.TEST_SAVE_NUMBER:
                     # Volume Visualization
-                    rendering_views = utils.helpers.get_volume_views(
-                        generated_volume.cpu().numpy()
-                    )
+                    rendering_views = utils.helpers.get_volume_views(generated_volume.cpu().numpy())
                     test_writer.add_image(
-                        "Model%02d/Reconstructed" % sample_idx,
+                        f"Model{sample_idx:02d}/Reconstructed",
                         rendering_views,
                         epoch_idx,
                     )
-                    rendering_views = utils.helpers.get_volume_views(
-                        ground_truth_volume.cpu().numpy()
-                    )
-                    test_writer.add_image(
-                        "Model%02d/GroundTruth" % sample_idx, rendering_views, epoch_idx
-                    )
+                    rendering_views = utils.helpers.get_volume_views(ground_truth_volume.cpu().numpy())
+                    test_writer.add_image(f"Model{sample_idx:02d}/GroundTruth", rendering_views, epoch_idx)
             elif cfg.TEST.VOL_OR_RENDER_SAVE.lower() == "volume":
                 # if test_writer and sample_idx < cfg.CONST.TEST_SAVE_NUMBER:
-                utils.helpers.save_test_volumes_as_np(
-                    cfg, generated_volume, sample_idx, epoch_idx
-                )
+                utils.helpers.save_test_volumes_as_np(cfg, generated_volume, sample_idx, epoch_idx)
             else:
                 raise Exception(
-                    "[FATAL] %s Invalid input for save format %s. voxels"
-                    % (dt.now(), cfg.TEST.VOL_OR_RENDER_SAVE)
+                    f"[FATAL] {dt.now()} Invalid input for save format {cfg.TEST.VOL_OR_RENDER_SAVE}. voxels"
                 )
 
             # Print sample loss and IoU
-            logging.info(
+            logger.info(
                 "Test[%d/%d] Taxonomy = %s Sample = %s EDLoss = %.4f RLoss = %.4f IoU = %s"
                 % (
                     sample_idx + 1,
@@ -221,7 +194,7 @@ def test_net(
                     sample_name,
                     encoder_loss.item(),
                     refiner_loss.item(),
-                    ["%.4f" % si for si in sample_iou],
+                    [f"{si:.4f}" for si in sample_iou],
                 )
             )
 
@@ -242,44 +215,39 @@ def test_net(
     mean_iou = []
     for taxonomy_id in test_iou:
         test_iou[taxonomy_id]["iou"] = np.mean(test_iou[taxonomy_id]["iou"], axis=0)
-        mean_iou.append(
-            test_iou[taxonomy_id]["iou"] * test_iou[taxonomy_id]["n_samples"]
-        )
+        mean_iou.append(test_iou[taxonomy_id]["iou"] * test_iou[taxonomy_id]["n_samples"])
     mean_iou = np.sum(mean_iou, axis=0) / n_samples
 
     # Print header
-    print("============================ TEST RESULTS ============================")
-    print("Taxonomy", end="\t")
-    print("#Sample", end="\t")
-    print("Baseline", end="\t")
+    logger.info("============================ TEST RESULTS ============================")
+    logger.info("Taxonomy", end="\t")
+    logger.info("#Sample", end="\t")
+    logger.info("Baseline", end="\t")
     for th in cfg.TEST.VOXEL_THRESH:
-        print("t=%.2f" % th, end="\t")
-    print()
+        logger.info(f"t={th:.2f}", end="\t")
+    logger.info("")
     # Print body
     for taxonomy_id in test_iou:
-        print("%s" % taxonomies[taxonomy_id]["taxonomy_name"].ljust(8), end="\t")
-        print("%d" % test_iou[taxonomy_id]["n_samples"], end="\t")
+        logger.info(f"{taxonomies[taxonomy_id]['taxonomy_name'].ljust(8)}", end="\t")
+        logger.info(f"{test_iou[taxonomy_id]['n_samples']}", end="\t")
         if "baseline" in taxonomies[taxonomy_id]:
-            # print('%.4f' % taxonomies[taxonomy_id]['baseline']['%d-view' % cfg.CONST.N_VIEWS_RENDERING], end='\t\t')
-            print("Ignoring baseline")
+            logger.info("Ignoring baseline")
         else:
-            print("N/a", end="\t\t")
+            logger.info("N/a", end="\t\t")
 
         for ti in test_iou[taxonomy_id]["iou"]:
-            print("%.4f" % ti, end="\t")
-        print()
+            logger.info(f"{ti:.4f}", end="\t")
+        logger.info("")
     # Print mean IoU for each threshold
-    print("Overall ", end="\t\t\t\t")
+    logger.info("Overall ", end="\t\t\t\t")
     for mi in mean_iou:
-        print("%.4f" % mi, end="\t")
-    print("\n")
+        logger.info(f"{mi:.4f}", end="\t")
+    logger.info("\n")
 
     # Add testing results to TensorBoard
     max_iou = np.max(mean_iou)
     if test_writer is not None:
-        test_writer.add_scalar(
-            "EncoderDecoder/EpochLoss", encoder_losses.avg, epoch_idx
-        )
+        test_writer.add_scalar("EncoderDecoder/EpochLoss", encoder_losses.avg, epoch_idx)
         test_writer.add_scalar("Refiner/EpochLoss", refiner_losses.avg, epoch_idx)
         test_writer.add_scalar("IoU", max_iou, epoch_idx)
 

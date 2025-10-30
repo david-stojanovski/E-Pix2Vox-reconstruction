@@ -1,18 +1,17 @@
+import os
 import glob
 import json
-import os
 from random import uniform
 
 import cv2
 import numpy as np
-from PIL import Image
-from matplotlib import pyplot as plt
-from natsort import natsorted
-from skimage.transform import rotate
-
 import image_operations as image_ops
 import ultrasound_cone_creation as ucc
+from PIL import Image
 from config import cfg
+from natsort import natsorted
+from matplotlib import pyplot as plt
+from skimage.transform import rotate
 
 
 def load_view_dictionary(load_path):
@@ -44,9 +43,7 @@ def zoom_shift_crop(view_dictionary, in_image, random_vars_in):
     height = int(in_image.shape[0] * (random_vars_in["zoom_factor"] * 100) / 100)
     dim = (width, height)
     image_zoom = np.array(Image.fromarray(in_image * 255.0).resize(dim)) / 255.0
-    shifted_img = shift_2d_replace(
-        image_zoom, random_vars_in["shift_x"], random_vars_in["shift_y"], constant=0
-    )
+    shifted_img = shift_2d_replace(image_zoom, random_vars_in["shift_x"], random_vars_in["shift_y"], constant=0)
     if view_dictionary["flip_x"]:
         shifted_img = np.fliplr(shifted_img)
     if view_dictionary["flip_y"]:
@@ -55,25 +52,20 @@ def zoom_shift_crop(view_dictionary, in_image, random_vars_in):
     return shifted_img
 
 
-def save_img2file(
-    img4saving, save_folder_path, save_folder_name, save_view_name, cone_mask=None
-):
+def save_img2file(img4saving, save_folder_path, save_folder_name, save_view_name, cone_mask=None) -> None:
     """Function that saves images to the correct paths."""
     save_folder_dir = os.sep.join(list(save_folder_path.split(os.sep)[0:-1]))
     case_name = save_folder_path.split(os.sep)[-1]
 
     if not os.path.isdir(os.path.join(save_folder_dir, save_folder_name, case_name)):
         os.makedirs(os.path.join(save_folder_dir, save_folder_name, case_name))
-    save_path = os.path.join(
-        save_folder_dir, save_folder_name, case_name, save_view_name
-    )
+    save_path = os.path.join(save_folder_dir, save_folder_name, case_name, save_view_name)
     if cone_mask is not None:
         out_img = Image.fromarray(apply_cone(img4saving, cone_mask) * 255).convert("L")
         out_img.save(save_path)
     else:
         out_img = Image.fromarray(normalize_data(img4saving) * 255).convert("L")
         out_img.save(save_path)
-    return
 
 
 def shift_2d_replace(data, dx, dy, constant=0):
@@ -112,9 +104,7 @@ def get_cropped_from_zoomed_img(in_image, in_cone):
         cone_center[1] + in_cone.shape[1] / 2,
     ]
 
-    return in_image[
-        crop4cone_x[0] : crop4cone_x[1], int(crop4cone_y[0]) : int(crop4cone_y[1])
-    ]
+    return in_image[crop4cone_x[0] : crop4cone_x[1], int(crop4cone_y[0]) : int(crop4cone_y[1])]
 
 
 def apply_cone(in_image, in_cone):
@@ -167,9 +157,7 @@ def find_bloodpools(cfg, in_img, rotation_angle):
 
     all_blood_pools = []
     for ii in range(len(cnt[0]) - 1):
-        single_blood_pool = cv2.fillPoly(
-            in_img_copy, pts=[cnt[0][ii]], color=(255, 255, 255)
-        )
+        single_blood_pool = cv2.fillPoly(in_img_copy, pts=[cnt[0][ii]], color=(255, 255, 255))
         all_blood_pools.append(single_blood_pool)
         in_img_copy = in_img.copy().astype("uint8")
 
@@ -196,7 +184,6 @@ def get_randomised_variables(cfg, view_augmentation_dict, view_name, dims):
         random_vars_out (dict), op (obj): Dictionary containing randomly assigned variables and an op representing the
         randomly selected choice of brightening or darkening.
     """
-
     random_rot_angle = uniform(
         view_augmentation_dict[view_name]["rot_angle"][0],
         view_augmentation_dict[view_name]["rot_angle"][1],
@@ -241,11 +228,9 @@ def get_randomised_variables(cfg, view_augmentation_dict, view_name, dims):
         1,
         max(0, np.random.normal(cfg.PARAMS.BRIGHTNESS_MEAN, cfg.PARAMS.BRIGHTNESS_STD)),
     )
-    sigma = max(
-        1, 4 * dims[0] + np.random.normal(cfg.PARAMS.SIZE_MEAN, cfg.PARAMS.SIZE_STD)
-    )
+    sigma = max(1, 4 * dims[0] + np.random.normal(cfg.PARAMS.SIZE_MEAN, cfg.PARAMS.SIZE_STD))
 
-    random_vars_out = dict()
+    random_vars_out = {}
     random_vars_out["rot_angle"] = random_rot_angle
     random_vars_out["zoom_factor"] = random_zoom_factor
     random_vars_out["shift_x"] = random_shift_x
@@ -272,32 +257,24 @@ def get_img_data(in_img_path):
     return out_image, out_view_name
 
 
-def convert_seg2pseudo(cfg, patient_folder_path, save_folder_path, in_cone=None):
-    """
-    Function to call relevant steps in converting a segmentation like (binary) image of a slice of the heart to a
+def convert_seg2pseudo(cfg, patient_folder_path, save_folder_path, in_cone=None) -> None:
+    """Function to call relevant steps in converting a segmentation like (binary) image of a slice of the heart to a
     pseudo image, in preparation for training/testing a CycleGAN network.
     """
-
     view_aug_dict = load_view_dictionary(cfg.DATA.JSON_VIEW_DICT_PATH)
     img_paths = natsorted(glob.glob(os.path.join(patient_folder_path, "*.png")))
 
     for img_path in img_paths:
         image, view_name = get_img_data(img_path)
-        random_vars, operation = get_randomised_variables(
-            cfg, view_aug_dict, view_name, image.shape
-        )
+        random_vars, operation = get_randomised_variables(cfg, view_aug_dict, view_name, image.shape)
 
         bloodpool_mask = find_bloodpools(cfg, image, random_vars["rot_angle"])
         rotated_img = rotate(image, random_vars["rot_angle"]).astype(int)
         pseudo = rotated_img.astype(int)
 
         pseudo = zoom_shift_crop(view_aug_dict[view_name], pseudo, random_vars)
-        rotated_img = zoom_shift_crop(
-            view_aug_dict[view_name], rotated_img, random_vars
-        )
-        bloodpool_mask = zoom_shift_crop(
-            view_aug_dict[view_name], bloodpool_mask, random_vars
-        )
+        rotated_img = zoom_shift_crop(view_aug_dict[view_name], rotated_img, random_vars)
+        bloodpool_mask = zoom_shift_crop(view_aug_dict[view_name], bloodpool_mask, random_vars)
 
         pseudo = image_ops.add_multiplicative_noise(pseudo)
         pseudo = np.array(
@@ -310,59 +287,37 @@ def convert_seg2pseudo(cfg, patient_folder_path, save_folder_path, in_cone=None)
             )
         )
 
-        pseudo = image_ops.add_additive_noise(
-            pseudo, cfg.NOISE.DOWNSIZE_FACTOR_1, cfg.NOISE.TYPE_1
-        )
+        pseudo = image_ops.add_additive_noise(pseudo, cfg.NOISE.DOWNSIZE_FACTOR_1, cfg.NOISE.TYPE_1)
         pseudo[np.where(bloodpool_mask == 1)] *= cfg.PARAMS.BLOOD_CONTRAST_RATIO
-        pseudo = cv2.GaussianBlur(
-            pseudo, cfg.BLUR.KSIZE_1, cfg.BLUR.SIGMAXY_1[0], cfg.BLUR.SIGMAXY_1[1]
-        )
-        pseudo = cv2.GaussianBlur(
-            pseudo, cfg.BLUR.KSIZE_2, cfg.BLUR.SIGMAXY_2[0], cfg.BLUR.SIGMAXY_2[1]
-        )
-        pseudo = image_ops.add_additive_noise(
-            pseudo, cfg.NOISE.DOWNSIZE_FACTOR_2, cfg.NOISE.TYPE_2
-        )
-        pseudo = image_ops.add_additive_noise(
-            pseudo, cfg.NOISE.DOWNSIZE_FACTOR_3, cfg.NOISE.TYPE_3
-        )
+        pseudo = cv2.GaussianBlur(pseudo, cfg.BLUR.KSIZE_1, cfg.BLUR.SIGMAXY_1[0], cfg.BLUR.SIGMAXY_1[1])
+        pseudo = cv2.GaussianBlur(pseudo, cfg.BLUR.KSIZE_2, cfg.BLUR.SIGMAXY_2[0], cfg.BLUR.SIGMAXY_2[1])
+        pseudo = image_ops.add_additive_noise(pseudo, cfg.NOISE.DOWNSIZE_FACTOR_2, cfg.NOISE.TYPE_2)
+        pseudo = image_ops.add_additive_noise(pseudo, cfg.NOISE.DOWNSIZE_FACTOR_3, cfg.NOISE.TYPE_3)
         pseudo = image_ops.set_random_max(pseudo)
 
         if in_cone is None:
-            in_cone, params = ucc.make_us_cone(cfg)
+            in_cone, _params = ucc.make_us_cone(cfg)
 
         pseudo = apply_cone(pseudo, in_cone)
-        pseudo = image_ops.resize(
-            pseudo, cfg.PARAMS.OUT_IMG_SIZE, Image.Resampling.BILINEAR
-        )
+        pseudo = image_ops.resize(pseudo, cfg.PARAMS.OUT_IMG_SIZE, Image.Resampling.BILINEAR)
 
-        cropped_pseudo = padding(
-            np.array(pseudo), cfg.PARAMS.OUT_IMG_SIZE[0], cfg.PARAMS.OUT_IMG_SIZE[1]
-        )
+        cropped_pseudo = padding(np.array(pseudo), cfg.PARAMS.OUT_IMG_SIZE[0], cfg.PARAMS.OUT_IMG_SIZE[1])
 
-        save_img2file(
-            cropped_pseudo, save_folder_path, "pseudo", view_name, cone_mask=None
-        )
-        save_img2file(
-            rotated_img, save_folder_path, "segmentation", view_name, cone_mask=in_cone
-        )
+        save_img2file(cropped_pseudo, save_folder_path, "pseudo", view_name, cone_mask=None)
+        save_img2file(rotated_img, save_folder_path, "segmentation", view_name, cone_mask=in_cone)
 
 
-def main(cfg):
+def main(cfg) -> None:
     data_folder = cfg.DATA.DATA_PATH
     save_folder = cfg.DATA.SAVE_PATH
     data_folders = natsorted(glob.glob(os.path.join(data_folder, "*")))
     if len(data_folders) == 0:
-        print("no images found")
+        pass
     cone, __ = ucc.make_us_cone(cfg)
 
     for folder in data_folders:
         case_folder = folder.split(os.sep)[-1]
-        convert_seg2pseudo(
-            cfg, folder, os.path.join(save_folder, case_folder), in_cone=cone
-        )
-        print(folder)
-    return
+        convert_seg2pseudo(cfg, folder, os.path.join(save_folder, case_folder), in_cone=cone)
 
 
 if __name__ == "__main__":

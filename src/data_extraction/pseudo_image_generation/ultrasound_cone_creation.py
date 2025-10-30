@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Feb 14 12:11:15 2022
+"""Created on Mon Feb 14 12:11:15 2022
 
 @author: david
 """
@@ -10,7 +8,7 @@ from PIL import Image
 
 
 def resize(im, size, resample=Image.NEAREST):
-    """resize the image to the given number of pixels"""
+    """Resize the image to the given number of pixels"""
     if type(im) is np.ndarray:
         im = Image.fromarray(im.astype(np.float32))
     height, width = size
@@ -20,8 +18,7 @@ def resize(im, size, resample=Image.NEAREST):
 
 
 def crop(im, crop_amount, locs=("top", "bottom", "left", "right")):
-    """crop function"""
-
+    """Crop function"""
     if crop_amount <= 0:
         return im
     if "top" in locs:
@@ -36,7 +33,7 @@ def crop(im, crop_amount, locs=("top", "bottom", "left", "right")):
 
 
 def crop_to_mask(image, mask):
-    """crop to the boundaries of the mask. mask should be bool (will be cast to bool)"""
+    """Crop to the boundaries of the mask. mask should be bool (will be cast to bool)"""
     mask = mask.astype(bool)
     min_r = np.where(mask == 1)[0].min()
     image = crop(image, min_r, locs=("top",))
@@ -74,14 +71,12 @@ def get_angle_mask(xx, yy, origin, width, tilt):
 
 
 def get_full_mask(inp_size, origin, radius, width, tilt, ax=None):
-    """calls both circle mask and angle mask to get a mask of an ultrasound cone.
+    """Calls both circle mask and angle mask to get a mask of an ultrasound cone.
     if ax is not None than the mask will be plotted.
     returns a mask with 0 being the region outside the cone and 1 the region inside it
     """
     assert radius <= inp_size, "radius should be smaller than image"
-    max_side_pt = max(
-        [radius * np.sin(width / 2 + tilt), radius * np.sin(-width / 2 - tilt)]
-    )
+    max_side_pt = max([radius * np.sin(width / 2 + tilt), radius * np.sin(-width / 2 - tilt)])
     diff = max_side_pt - inp_size / 2
     if diff > 0:
         inp_size = int(np.ceil(max_side_pt * 2))
@@ -116,12 +111,8 @@ def make_us_cone(cfg):
     origin_ys = np.ones(shape=(1,))
     origin_xs = inp_size / 2 * np.ones(shape=(1,))
 
-    for radius, width, tilt, origin_y, origin_x in zip(
-        radii, widths, tilts, origin_ys, origin_xs
-    ):
-        params = dict(
-            radius=radius, width=width, tilt=tilt, origin_x=origin_x, origin_y=origin_y
-        )
+    for radius, width, tilt, origin_y, origin_x in zip(radii, widths, tilts, origin_ys, origin_xs):
+        params = {"radius": radius, "width": width, "tilt": tilt, "origin_x": origin_x, "origin_y": origin_y}
         mask = get_full_mask(inp_size, [origin_y, origin_x], radius, width, tilt)
         mask = crop_to_mask(mask, mask)
         mask = resize(mask, (inp_size, inp_size))

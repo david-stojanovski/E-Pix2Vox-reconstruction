@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
@@ -6,8 +5,8 @@ import torch
 
 
 class Decoder(torch.nn.Module):
-    def __init__(self, cfg):
-        super(Decoder, self).__init__()
+    def __init__(self, cfg) -> None:
+        super().__init__()
         self.cfg = cfg
 
         # Layer Definition
@@ -60,9 +59,7 @@ class Decoder(torch.nn.Module):
             torch.nn.ReLU(),
         )
         self.layer5 = torch.nn.Sequential(
-            torch.nn.ConvTranspose3d(
-                8, 1, kernel_size=1, bias=cfg.NETWORK.TCONV_USE_BIAS
-            ),
+            torch.nn.ConvTranspose3d(8, 1, kernel_size=1, bias=cfg.NETWORK.TCONV_USE_BIAS),
             torch.nn.Sigmoid(),
         )
 

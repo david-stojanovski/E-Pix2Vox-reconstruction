@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
@@ -6,8 +5,8 @@ import torch
 
 
 class Refiner(torch.nn.Module):
-    def __init__(self, cfg):
-        super(Refiner, self).__init__()
+    def __init__(self, cfg) -> None:
+        super().__init__()
         self.cfg = cfg
 
         # Layer Definition

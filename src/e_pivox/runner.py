@@ -1,27 +1,28 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
-import logging
 import os
 import sys
+import logging
+import argparse
+from pathlib import Path
 
-import matplotlib
 import numpy as np
+import matplotlib as mpl
+from loguru import logger
 
 # Fix problem: no $DISPLAY environment variable
-matplotlib.use("GTK4Agg")
+mpl.use("GTK4Agg")
 
 from argparse import ArgumentParser
-from pprint import pprint
 
 from config import cfg
-from core.train import train_net
 from core.test import test_net
+from core.train import train_net
 
 
-def get_args_from_command_line():
+def get_args_from_command_line() -> argparse.Namespace:
     parser = ArgumentParser(description="Parser of Runner of Pix2Vox")
     parser.add_argument(
         "--gpu",
@@ -63,14 +64,12 @@ def get_args_from_command_line():
         help="Initialize network from the weights file",
         default=None,
     )
-    parser.add_argument(
-        "--out", dest="out_path", help="Set output path", default=cfg.DIR.OUT_PATH
-    )
+    parser.add_argument("--out", dest="out_path", help="Set output path", default=cfg.DIR.OUT_PATH)
     args = parser.parse_args()
     return args
 
 
-def main():
+def main() -> None:
     # Get args from command line
     args = get_args_from_command_line()
 
@@ -90,8 +89,7 @@ def main():
             cfg.TRAIN.RESUME_TRAIN = True
 
     # Print config
-    print("Use config:")
-    pprint(cfg)
+    logger.info("Use config:")
 
     # Set GPU to use
     if type(cfg.CONST.DEVICE) is str:
@@ -100,21 +98,13 @@ def main():
     # Start train/test process
     if not args.test:
         train_net(cfg)
+    elif "WEIGHTS" in cfg.CONST and Path.exists(cfg.CONST.WEIGHTS):
+        test_net(cfg)
     else:
-        if "WEIGHTS" in cfg.CONST and os.path.exists(cfg.CONST.WEIGHTS):
-            test_net(cfg)
-        else:
-            logging.error("Please specify the file path of checkpoint.")
-            sys.exit(2)
+        logger.error("Please specify the file path of checkpoint.")
+        sys.exit(2)
 
 
 if __name__ == "__main__":
-    if sys.version_info < (3, 0):
-        raise Exception(
-            "Please follow the installation instruction on 'https://github.com/hzxie/Pix2Vox'"
-        )
-
-    logging.basicConfig(
-        format="[%(levelname)s] %(asctime)s %(message)s", level=logging.DEBUG
-    )
+    logging.basicConfig(format="[%(levelname)s] %(asctime)s %(message)s", level=logging.DEBUG)
     main()

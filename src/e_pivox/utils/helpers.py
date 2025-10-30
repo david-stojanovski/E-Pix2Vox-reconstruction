@@ -1,25 +1,26 @@
-# -*- coding: utf-8 -*-
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
 import os
-
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-from mpl_toolkits.mplot3d import Axes3D
-import utils.network_losses as net_loss
+from pathlib import Path
 from datetime import datetime as dt
 
+import numpy as np
+import torch
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
-def var_or_cuda(x):
+import utils.network_losses as net_loss
+
+
+def var_or_cuda(x: torch.Tensor) -> torch.Tensor:
     if torch.cuda.is_available():
         x = x.cuda(non_blocking=True)
 
     return x
 
 
-def init_weights(m):
+def init_weights(m: torch.nn.Module) -> None:
     if (
         torch.nn.Conv2d is type(m)
         or torch.nn.Conv3d is type(m)
@@ -37,11 +38,11 @@ def init_weights(m):
         torch.nn.init.constant_(m.bias, 0)
 
 
-def count_parameters(model):
+def count_parameters(model: torch.nn.Module) -> int:
     return sum(p.numel() for p in model.parameters())
 
 
-def get_volume_views(volume):
+def get_volume_views(volume: torch.Tensor) -> np.ndarray:
     volume = volume.squeeze().__ge__(0.5)
     fig = plt.figure()
     ax = fig.gca(projection=Axes3D.name)
@@ -50,23 +51,23 @@ def get_volume_views(volume):
 
     fig.canvas.draw()
     img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep="")
-    img = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    img = img.reshape((*fig.canvas.get_width_height()[::-1], 3))
     return img
 
 
-def save_test_volumes_as_np(cfg, volume, sample_id, epoch_num):
-    img_dir = os.path.join(cfg.DIR.OUT_PATH, "images")
-    test_case_path = os.path.join(img_dir, "test")
-    save_path = os.path.join(test_case_path, str(sample_id) + os.sep)
+def save_test_volumes_as_np(cfg, volume, sample_id, epoch_num) -> None:
+    img_dir = cfg.DIR.OUT_PATH / "images"
+    test_case_path = img_dir / "test"
+    save_path = test_case_path / (str(sample_id) + os.sep)
 
-    if not os.path.isdir(img_dir):
-        os.mkdir(img_dir)
-    if not os.path.isdir(test_case_path):
-        os.mkdir(test_case_path)
-    if not os.path.isdir(save_path):
-        os.mkdir(save_path)
+    if not Path(img_dir).exists():
+        img_dir.mkdir(parents=True, exist_ok=True)
+    if not Path(test_case_path).exists():
+        test_case_path.mkdir(parents=True, exist_ok=True)
+    if not Path(save_path).exists():
+        save_path.mkdir(parents=True, exist_ok=True)
 
-    np.save(save_path + "epoch_" + str(epoch_num), volume.cpu().numpy())
+    np.save(save_path / ("epoch_" + str(epoch_num)), volume.cpu().numpy())
 
 
 def get_loss_function(cfg):
@@ -81,20 +82,16 @@ def get_loss_function(cfg):
     elif cfg.NETWORK.LOSS_FUNC.lower() == "focaltverskyloss":
         loss_func = net_loss.FocalTverskyLoss()
     else:
+        msg = f"[FATAL] {dt.now()} No matching loss function available for: {cfg.NETWORK.LOSS_FUNC}. voxels"
         raise Exception(
-            "[FATAL] %s No matching loss function available for: %s. voxels"
-            % (dt.now(), cfg.NETWORK.LOSS_FUNC)
+            msg
         )
     return loss_func
 
 
-def model_size_importer(cfg):
-    if cfg.NETWORK.MODEL_SIZE == 32:
-        pass
-    elif cfg.NETWORK.MODEL_SIZE == 64:
+def model_size_importer(cfg) -> None:
+    if cfg.NETWORK.MODEL_SIZE in {32, 64}:
         pass
     else:
-        raise Exception(
-            "[FATAL] %s No model available for size: %s. voxels"
-            % (dt.now(), cfg.NETWORK.MODEL_SIZE)
-        )
+        msg = f"[FATAL] {dt.now()} No model available for size: {cfg.NETWORK.MODEL_SIZE}. voxels"
+        raise Exception(msg)

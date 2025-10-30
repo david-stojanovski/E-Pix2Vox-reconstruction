@@ -22,7 +22,7 @@ dependencies = [
     "pyvista>=0.46.3,<0.47",
     "natsort>=8.4.0,<9",
     "pyntcloud>=0.3.1,<0.4",
-    "pillow>=12.0.0,<13",
+    "pillow>=12.0.0,<13", "torch>=2.9.0,<3", "loguru>=0.7.3,<0.8",
 ]
 
 [project.optional-dependencies]
@@ -40,7 +40,7 @@ build-backend = "setuptools.build_meta"
 package-dir = { "" = "src" }
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 lint.select = ["ALL"]
 lint.ignore = [
     "ANN401",
@@ -48,7 +48,11 @@ lint.ignore = [
     "COM812",
     "D100",
     "D101",
+    "D102", # TODO: Enable later
+    "D103", # TODO: Enable later
     "D104",
+    "D106", # TODO: Enable later
+    "D107", # TODO: Enable later
     "D203",
     "D213",
     "D400",
