@@ -11,63 +11,92 @@ class Refiner(torch.nn.Module):
             torch.nn.Conv3d(1, 8, kernel_size=4, padding=2),
             torch.nn.BatchNorm3d(8),
             torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
-            torch.nn.MaxPool3d(kernel_size=2)
+            torch.nn.MaxPool3d(kernel_size=2),
         )
         self.layer2 = torch.nn.Sequential(
             torch.nn.Conv3d(8, 16, kernel_size=4, padding=2),
             torch.nn.BatchNorm3d(16),
             torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
-            torch.nn.MaxPool3d(kernel_size=2)
+            torch.nn.MaxPool3d(kernel_size=2),
         )
         self.layer3 = torch.nn.Sequential(
             torch.nn.Conv3d(16, 32, kernel_size=4, padding=2),
             torch.nn.BatchNorm3d(32),
             torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
-            torch.nn.MaxPool3d(kernel_size=2)
+            torch.nn.MaxPool3d(kernel_size=2),
         )
         self.layer4 = torch.nn.Sequential(
             torch.nn.Conv3d(32, 64, kernel_size=4, padding=2),
             torch.nn.BatchNorm3d(64),
             torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
-            torch.nn.MaxPool3d(kernel_size=2)
+            torch.nn.MaxPool3d(kernel_size=2),
         )
         self.layer5 = torch.nn.Sequential(
             torch.nn.Conv3d(64, 128, kernel_size=4, padding=2),
             torch.nn.BatchNorm3d(128),
             torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
-            torch.nn.MaxPool3d(kernel_size=2)
+            torch.nn.MaxPool3d(kernel_size=2),
         )
-        self.layer6 = torch.nn.Sequential(
-            torch.nn.Linear(8192, 2048),
-            torch.nn.ReLU()
-        )
-        self.layer7 = torch.nn.Sequential(
-            torch.nn.Linear(2048, 8192),
-            torch.nn.ReLU()
-        )
+        self.layer6 = torch.nn.Sequential(torch.nn.Linear(8192, 2048), torch.nn.ReLU())
+        self.layer7 = torch.nn.Sequential(torch.nn.Linear(2048, 8192), torch.nn.ReLU())
         self.layer8 = torch.nn.Sequential(
-            torch.nn.ConvTranspose3d(128, 64, kernel_size=4, stride=2, bias=cfg.NETWORK.TCONV_USE_BIAS, padding=1),
+            torch.nn.ConvTranspose3d(
+                128,
+                64,
+                kernel_size=4,
+                stride=2,
+                bias=cfg.NETWORK.TCONV_USE_BIAS,
+                padding=1,
+            ),
             torch.nn.BatchNorm3d(64),
-            torch.nn.ReLU()
+            torch.nn.ReLU(),
         )
         self.layer9 = torch.nn.Sequential(
-            torch.nn.ConvTranspose3d(64, 32, kernel_size=4, stride=2, bias=cfg.NETWORK.TCONV_USE_BIAS, padding=1),
+            torch.nn.ConvTranspose3d(
+                64,
+                32,
+                kernel_size=4,
+                stride=2,
+                bias=cfg.NETWORK.TCONV_USE_BIAS,
+                padding=1,
+            ),
             torch.nn.BatchNorm3d(32),
-            torch.nn.ReLU()
+            torch.nn.ReLU(),
         )
         self.layer10 = torch.nn.Sequential(
-            torch.nn.ConvTranspose3d(32, 16, kernel_size=4, stride=2, bias=cfg.NETWORK.TCONV_USE_BIAS, padding=1),
+            torch.nn.ConvTranspose3d(
+                32,
+                16,
+                kernel_size=4,
+                stride=2,
+                bias=cfg.NETWORK.TCONV_USE_BIAS,
+                padding=1,
+            ),
             torch.nn.BatchNorm3d(16),
-            torch.nn.ReLU()
+            torch.nn.ReLU(),
         )
         self.layer11 = torch.nn.Sequential(
-            torch.nn.ConvTranspose3d(16, 8, kernel_size=4, stride=2, bias=cfg.NETWORK.TCONV_USE_BIAS, padding=1),
+            torch.nn.ConvTranspose3d(
+                16,
+                8,
+                kernel_size=4,
+                stride=2,
+                bias=cfg.NETWORK.TCONV_USE_BIAS,
+                padding=1,
+            ),
             torch.nn.BatchNorm3d(8),
-            torch.nn.ReLU()
+            torch.nn.ReLU(),
         )
         self.layer12 = torch.nn.Sequential(
-            torch.nn.ConvTranspose3d(8, 1, kernel_size=4, stride=2, bias=cfg.NETWORK.TCONV_USE_BIAS, padding=1),
-            torch.nn.Sigmoid()
+            torch.nn.ConvTranspose3d(
+                8,
+                1,
+                kernel_size=4,
+                stride=2,
+                bias=cfg.NETWORK.TCONV_USE_BIAS,
+                padding=1,
+            ),
+            torch.nn.Sigmoid(),
         )
 
     def forward(self, coarse_volumes):

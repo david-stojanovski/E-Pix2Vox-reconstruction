@@ -10,27 +10,27 @@ class Merger(torch.nn.Module):
         self.layer1 = torch.nn.Sequential(
             torch.nn.Conv3d(9, 16, kernel_size=3, padding=1),
             torch.nn.BatchNorm3d(16),
-            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE)
+            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
         )
         self.layer2 = torch.nn.Sequential(
             torch.nn.Conv3d(16, 8, kernel_size=3, padding=1),
             torch.nn.BatchNorm3d(8),
-            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE)
+            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
         )
         self.layer3 = torch.nn.Sequential(
             torch.nn.Conv3d(8, 4, kernel_size=3, padding=1),
             torch.nn.BatchNorm3d(4),
-            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE)
+            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
         )
         self.layer4 = torch.nn.Sequential(
             torch.nn.Conv3d(4, 2, kernel_size=3, padding=1),
             torch.nn.BatchNorm3d(2),
-            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE)
+            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
         )
         self.layer5 = torch.nn.Sequential(
             torch.nn.Conv3d(2, 1, kernel_size=3, padding=1),
             torch.nn.BatchNorm3d(1),
-            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE)
+            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
         )
 
     def forward(self, raw_features, coarse_volumes):

@@ -8,6 +8,7 @@ import os
 import random
 
 import cv2
+
 # import matplotlib.pyplot as plt
 # import matplotlib.patches as patches
 import numpy as np
@@ -16,7 +17,7 @@ from skimage.draw import disk
 
 
 class Compose(object):
-    """ Composes several transforms together.
+    """Composes several transforms together.
     For example:
     >>> transforms.Compose([
     >>>     transforms.RandomBackground(),
@@ -29,7 +30,10 @@ class Compose(object):
 
     def __call__(self, rendering_images, bounding_box=None):
         for t in self.transforms:
-            if t.__class__.__name__ == 'RandomCrop' or t.__class__.__name__ == 'CenterCrop':
+            if (
+                t.__class__.__name__ == "RandomCrop"
+                or t.__class__.__name__ == "CenterCrop"
+            ):
                 rendering_images = t(rendering_images, bounding_box)
             else:
                 rendering_images = t(rendering_images)
@@ -44,7 +48,7 @@ class ToTensor(object):
     """
 
     def __call__(self, rendering_images):
-        assert (isinstance(rendering_images, np.ndarray))
+        assert isinstance(rendering_images, np.ndarray)
         array = np.transpose(rendering_images, (0, 3, 1, 2))
         # handle numpy array
         tensor = torch.from_numpy(array)
@@ -59,7 +63,7 @@ class Normalize(object):
         self.std = std
 
     def __call__(self, rendering_images):
-        assert (isinstance(rendering_images, np.ndarray))
+        assert isinstance(rendering_images, np.ndarray)
         rendering_images -= self.mean
         rendering_images /= self.std
 
@@ -68,7 +72,7 @@ class Normalize(object):
 
 class RandomPermuteRGB(object):
     def __call__(self, rendering_images):
-        assert (isinstance(rendering_images, np.ndarray))
+        assert isinstance(rendering_images, np.ndarray)
 
         random_permutation = np.random.permutation(3)
         for img_idx, img in enumerate(rendering_images):
@@ -90,7 +94,9 @@ class CenterCrop(object):
             return rendering_images
 
         crop_size_c = rendering_images[0].shape[2]
-        processed_images = np.empty(shape=(0, self.img_size_h, self.img_size_w, crop_size_c))
+        processed_images = np.empty(
+            shape=(0, self.img_size_h, self.img_size_w, crop_size_c)
+        )
         for img_idx, img in enumerate(rendering_images):
             img_height, img_width, _ = img.shape
 
@@ -105,15 +111,15 @@ class CenterCrop(object):
                 # Calculate the size of bounding boxes
                 bbox_width = bounding_box[2] - bounding_box[0]
                 bbox_height = bounding_box[3] - bounding_box[1]
-                bbox_x_mid = (bounding_box[2] + bounding_box[0]) * .5
-                bbox_y_mid = (bounding_box[3] + bounding_box[1]) * .5
+                bbox_x_mid = (bounding_box[2] + bounding_box[0]) * 0.5
+                bbox_y_mid = (bounding_box[3] + bounding_box[1]) * 0.5
 
                 # Make the crop area as a square
                 square_object_size = max(bbox_width, bbox_height)
-                x_left = int(bbox_x_mid - square_object_size * .5)
-                x_right = int(bbox_x_mid + square_object_size * .5)
-                y_top = int(bbox_y_mid - square_object_size * .5)
-                y_bottom = int(bbox_y_mid + square_object_size * .5)
+                x_left = int(bbox_x_mid - square_object_size * 0.5)
+                x_right = int(bbox_x_mid + square_object_size * 0.5)
+                y_top = int(bbox_y_mid - square_object_size * 0.5)
+                y_bottom = int(bbox_y_mid + square_object_size * 0.5)
 
                 # If the crop position is out of the image, fix it with padding
                 pad_x_left = 0
@@ -134,10 +140,14 @@ class CenterCrop(object):
                     y_bottom = img_height - 1
 
                 # Padding the image and resize the image
-                processed_image = np.pad(img[y_top:y_bottom + 1, x_left:x_right + 1],
-                                         ((pad_y_top, pad_y_bottom), (pad_x_left, pad_x_right), (0, 0)),
-                                         mode='edge')
-                processed_image = cv2.resize(processed_image, (self.img_size_w, self.img_size_h))
+                processed_image = np.pad(
+                    img[y_top : y_bottom + 1, x_left : x_right + 1],
+                    ((pad_y_top, pad_y_bottom), (pad_x_left, pad_x_right), (0, 0)),
+                    mode="edge",
+                )
+                processed_image = cv2.resize(
+                    processed_image, (self.img_size_w, self.img_size_h)
+                )
             else:
                 if img_height > self.crop_size_h and img_width > self.crop_size_w:
                     x_left = int(img_width - self.crop_size_w) // 2
@@ -150,7 +160,10 @@ class CenterCrop(object):
                     y_top = 0
                     y_bottom = img_height
 
-                processed_image = cv2.resize(img[y_top:y_bottom, x_left:x_right], (self.img_size_w, self.img_size_h))
+                processed_image = cv2.resize(
+                    img[y_top:y_bottom, x_left:x_right],
+                    (self.img_size_w, self.img_size_h),
+                )
 
             processed_images = np.append(processed_images, [processed_image], axis=0)
             # Debug
@@ -184,7 +197,9 @@ class RandomCrop(object):
             return rendering_images
 
         crop_size_c = rendering_images[0].shape[2]
-        processed_images = np.empty(shape=(0, self.img_size_h, self.img_size_w, crop_size_c))
+        processed_images = np.empty(
+            shape=(0, self.img_size_h, self.img_size_w, crop_size_c)
+        )
         for img_idx, img in enumerate(rendering_images):
             img_height, img_width, _ = img.shape
 
@@ -199,17 +214,21 @@ class RandomCrop(object):
                 # Calculate the size of bounding boxes
                 bbox_width = bounding_box[2] - bounding_box[0]
                 bbox_height = bounding_box[3] - bounding_box[1]
-                bbox_x_mid = (bounding_box[2] + bounding_box[0]) * .5
-                bbox_y_mid = (bounding_box[3] + bounding_box[1]) * .5
+                bbox_x_mid = (bounding_box[2] + bounding_box[0]) * 0.5
+                bbox_y_mid = (bounding_box[3] + bounding_box[1]) * 0.5
 
                 # Make the crop area as a square
                 square_object_size = max(bbox_width, bbox_height)
                 square_object_size = square_object_size * random.uniform(0.8, 1.2)
 
-                x_left = int(bbox_x_mid - square_object_size * random.uniform(.4, .6))
-                x_right = int(bbox_x_mid + square_object_size * random.uniform(.4, .6))
-                y_top = int(bbox_y_mid - square_object_size * random.uniform(.4, .6))
-                y_bottom = int(bbox_y_mid + square_object_size * random.uniform(.4, .6))
+                x_left = int(bbox_x_mid - square_object_size * random.uniform(0.4, 0.6))
+                x_right = int(
+                    bbox_x_mid + square_object_size * random.uniform(0.4, 0.6)
+                )
+                y_top = int(bbox_y_mid - square_object_size * random.uniform(0.4, 0.6))
+                y_bottom = int(
+                    bbox_y_mid + square_object_size * random.uniform(0.4, 0.6)
+                )
 
                 # If the crop position is out of the image, fix it with padding
                 pad_x_left = 0
@@ -230,10 +249,14 @@ class RandomCrop(object):
                     y_bottom = img_height - 1
 
                 # Padding the image and resize the image
-                processed_image = np.pad(img[y_top:y_bottom + 1, x_left:x_right + 1],
-                                         ((pad_y_top, pad_y_bottom), (pad_x_left, pad_x_right), (0, 0)),
-                                         mode='edge')
-                processed_image = cv2.resize(processed_image, (self.img_size_w, self.img_size_h))
+                processed_image = np.pad(
+                    img[y_top : y_bottom + 1, x_left : x_right + 1],
+                    ((pad_y_top, pad_y_bottom), (pad_x_left, pad_x_right), (0, 0)),
+                    mode="edge",
+                )
+                processed_image = cv2.resize(
+                    processed_image, (self.img_size_w, self.img_size_h)
+                )
             else:
                 if img_height > self.crop_size_h and img_width > self.crop_size_w:
                     x_left = int(img_width - self.crop_size_w) // 2
@@ -246,7 +269,10 @@ class RandomCrop(object):
                     y_top = 0
                     y_bottom = img_height
 
-                processed_image = cv2.resize(img[y_top:y_bottom, x_left:x_right], (self.img_size_w, self.img_size_h))
+                processed_image = cv2.resize(
+                    img[y_top:y_bottom, x_left:x_right],
+                    (self.img_size_w, self.img_size_h),
+                )
 
             processed_images = np.append(processed_images, [processed_image], axis=0)
 
@@ -255,7 +281,7 @@ class RandomCrop(object):
 
 class RandomFlip(object):
     def __call__(self, rendering_images):
-        assert (isinstance(rendering_images, np.ndarray))
+        assert isinstance(rendering_images, np.ndarray)
 
         for img_idx, img in enumerate(rendering_images):
             if random.randint(0, 1):
@@ -271,18 +297,23 @@ class RandomOcclude(object):
         self.img_size_w = img_size[1]
 
     def __call__(self, rendering_images):
-        assert (isinstance(rendering_images, np.ndarray))
+        assert isinstance(rendering_images, np.ndarray)
 
         for img_idx, img in enumerate(rendering_images):
             if random.randint(0, 1):
-
                 arr = np.zeros((self.img_size_w, self.img_size_h))
                 if np.shape(np.where(img[:, :, 0] > 0))[1] > 0:
                     img_limit = np.squeeze(np.where(img[:, :, 0] > 0))
-                    selected_column = np.random.randint(0, high=np.shape(np.where(img[:, :, 0] > 0))[1], size=(1,))
+                    selected_column = np.random.randint(
+                        0, high=np.shape(np.where(img[:, :, 0] > 0))[1], size=(1,)
+                    )
                     x_centre = img_limit[0, selected_column][0]
                     y_centre = img_limit[1, selected_column][0]
-                    rr, cc = disk((y_centre, x_centre), radius=np.random.randint(15, 20), shape=arr.shape)
+                    rr, cc = disk(
+                        (y_centre, x_centre),
+                        radius=np.random.randint(15, 20),
+                        shape=arr.shape,
+                    )
                     arr[rr, cc] = -1
                     arr = arr + 1
                     img_occluded = np.multiply(img[:, :, 0], arr)
@@ -301,7 +332,7 @@ class RandomBlacking(object):
         self.random_num_blacked = random_num_blacked
 
     def __call__(self, rendering_images):
-        assert (isinstance(rendering_images, np.ndarray))
+        assert isinstance(rendering_images, np.ndarray)
 
         for img_idx, img in enumerate(rendering_images):
             if random.randint(0, self.random_num_blacked):
@@ -335,7 +366,7 @@ class ColorJitter(object):
         saturation = 1 + np.random.uniform(low=-self.saturation, high=self.saturation)
 
         # Randomize the order of changing brightness, contrast, and saturation
-        attr_names = ['brightness', 'contrast', 'saturation']
+        attr_names = ["brightness", "contrast", "saturation"]
         attr_values = [brightness, contrast, saturation]  # The value of changing attrs
         attr_indexes = np.array(range(len(attr_names)))  # The order of changing attrs
         np.random.shuffle(attr_indexes)
@@ -343,7 +374,9 @@ class ColorJitter(object):
         for img_idx, img in enumerate(rendering_images):
             processed_image = img
             for idx in attr_indexes:
-                processed_image = self._adjust_image_attr(processed_image, attr_names[idx], attr_values[idx])
+                processed_image = self._adjust_image_attr(
+                    processed_image, attr_names[idx], attr_values[idx]
+                )
 
             processed_images = np.append(processed_images, [processed_image], axis=0)
             # print('ColorJitter', np.mean(ori_img), np.mean(processed_image))
@@ -372,11 +405,11 @@ class ColorJitter(object):
         """
         gs = self._bgr_to_gray(img)
 
-        if attr_name == 'contrast':
+        if attr_name == "contrast":
             img = self._alpha_blend(img, np.mean(gs[:, :, 0]), attr_value)
-        elif attr_name == 'saturation':
+        elif attr_name == "saturation":
             img = self._alpha_blend(img, gs, attr_value)
-        elif attr_name == 'brightness':
+        elif attr_name == "brightness":
             img = self._alpha_blend(img, 0, attr_value)
         else:
             raise NotImplementedError(attr_name)
@@ -420,31 +453,35 @@ class ColorJitter(object):
 
 
 class RandomNoise(object):
-    def __init__(self,
-                 noise_std,
-                 eigvals=(0.2175, 0.0188, 0.0045),
-                 eigvecs=((-0.5675, 0.7192, 0.4009), (-0.5808, -0.0045, -0.8140), (-0.5836, -0.6948, 0.4203))):
+    def __init__(
+        self,
+        noise_std,
+        eigvals=(0.2175, 0.0188, 0.0045),
+        eigvecs=(
+            (-0.5675, 0.7192, 0.4009),
+            (-0.5808, -0.0045, -0.8140),
+            (-0.5836, -0.6948, 0.4203),
+        ),
+    ):
         self.noise_std = noise_std
         self.eigvals = np.array(eigvals)
         self.eigvecs = np.array(eigvecs)
 
     def __call__(self, rendering_images):
         alpha = np.random.normal(loc=0, scale=self.noise_std, size=3)
-        noise_rgb = \
-            np.sum(
-                np.multiply(
-                    np.multiply(
-                        self.eigvecs,
-                        np.tile(alpha, (3, 1))
-                    ),
-                    np.tile(self.eigvals, (3, 1))
-                ),
-                axis=1
-            )
+        noise_rgb = np.sum(
+            np.multiply(
+                np.multiply(self.eigvecs, np.tile(alpha, (3, 1))),
+                np.tile(self.eigvals, (3, 1)),
+            ),
+            axis=1,
+        )
 
         # Allocate new space for storing processed images
         img_height, img_width, img_channels = rendering_images[0].shape
-        assert (img_channels == 3), "Please use RandomBackground to normalize image channels"
+        assert img_channels == 3, (
+            "Please use RandomBackground to normalize image channels"
+        )
         processed_images = np.empty(shape=(0, img_height, img_width, img_channels))
 
         for img_idx, img in enumerate(rendering_images):
@@ -473,7 +510,9 @@ class RandomBackground(object):
         self.random_bg_files = []
         if random_bg_folder_path is not None:
             self.random_bg_files = os.listdir(random_bg_folder_path)
-            self.random_bg_files = [os.path.join(random_bg_folder_path, rbf) for rbf in self.random_bg_files]
+            self.random_bg_files = [
+                os.path.join(random_bg_folder_path, rbf) for rbf in self.random_bg_files
+            ]
 
     def __call__(self, rendering_images):
         if len(rendering_images) == 0:
@@ -485,21 +524,34 @@ class RandomBackground(object):
             return rendering_images
 
         # Generate random background
-        r, g, b = np.array([
-            np.random.randint(self.random_bg_color_range[i][0], self.random_bg_color_range[i][1] + 1) for i in range(3)
-        ]) / 255.
+        r, g, b = (
+            np.array(
+                [
+                    np.random.randint(
+                        self.random_bg_color_range[i][0],
+                        self.random_bg_color_range[i][1] + 1,
+                    )
+                    for i in range(3)
+                ]
+            )
+            / 255.0
+        )
 
         random_bg = None
         if len(self.random_bg_files) > 0:
             random_bg_file_path = random.choice(self.random_bg_files)
-            random_bg = cv2.imread(random_bg_file_path).astype(np.float32) / 255.
+            random_bg = cv2.imread(random_bg_file_path).astype(np.float32) / 255.0
 
         # Apply random background
         processed_images = np.empty(shape=(0, img_height, img_width, img_channels - 1))
         for img_idx, img in enumerate(rendering_images):
             alpha = (np.expand_dims(img[:, :, 3], axis=2) == 0).astype(np.float32)
             img = img[:, :, :3]
-            bg_color = random_bg if random.randint(0, 1) and random_bg is not None else np.array([[[r, g, b]]])
+            bg_color = (
+                random_bg
+                if random.randint(0, 1) and random_bg is not None
+                else np.array([[[r, g, b]]])
+            )
             img = alpha * bg_color + (1 - alpha) * img
 
             processed_images = np.append(processed_images, [img], axis=0)
