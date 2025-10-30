@@ -1,5 +1,5 @@
-import numpy as np
 import vtk
+import numpy as np
 
 
 def find_points_on_plane(plane_vars):
@@ -60,7 +60,7 @@ def calc_rot_mat_to_xy_plane(normalized_v, check_determinant=False):
     )
 
     if check_determinant:
-        print("det of R is: {0:.5f}".format(np.linalg.det(r_mat)))
+        pass
 
     return expand_rot_mat(r_mat)
 

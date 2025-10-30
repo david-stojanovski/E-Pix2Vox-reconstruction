@@ -2,12 +2,12 @@ import torch
 
 
 class IoULoss(torch.nn.Module):
-    def __init__(self, weight=None, size_average=True):
-        super(IoULoss, self).__init__()
+    def __init__(self, weight=None, size_average=True) -> None:
+        super().__init__()
 
     def forward(self, inputs, targets, smooth=1):
         # comment out if your model contains a sigmoid or equivalent activation layer
-        # inputs = F.sigmoid(inputs)
+        inputs = torch.nn.functional.sigmoid(inputs)
 
         # flatten label and prediction tensors
         inputs = inputs.view(-1)
@@ -25,8 +25,8 @@ class IoULoss(torch.nn.Module):
 
 
 class FocalLoss(torch.nn.Module):
-    def __init__(self, weight=None, size_average=True):
-        super(FocalLoss, self).__init__()
+    def __init__(self, weight=None, size_average=True) -> None:
+        super().__init__()
 
     def forward(self, inputs, targets, alpha=0.8, gamma=2, smooth=1):
         # comment out if your model contains a sigmoid or equivalent activation layer
@@ -37,9 +37,7 @@ class FocalLoss(torch.nn.Module):
         targets = targets.view(-1)
 
         # first compute binary cross-entropy
-        BCE = torch.nn.functional.binary_cross_entropy(
-            inputs, targets, reduction="mean"
-        )
+        BCE = torch.nn.functional.binary_cross_entropy(inputs, targets, reduction="mean")
         BCE_EXP = torch.exp(-BCE)
         focal_loss = alpha * (1 - BCE_EXP) ** gamma * BCE
 
@@ -47,8 +45,8 @@ class FocalLoss(torch.nn.Module):
 
 
 class TverskyLoss(torch.nn.Module):
-    def __init__(self, weight=None, size_average=True):
-        super(TverskyLoss, self).__init__()
+    def __init__(self) -> None:
+        super().__init__()
 
     def forward(self, inputs, targets, smooth=1, alpha=0.5, beta=0.5):
         # comment out if your model contains a sigmoid or equivalent activation layer
@@ -69,10 +67,18 @@ class TverskyLoss(torch.nn.Module):
 
 
 class FocalTverskyLoss(torch.nn.Module):
-    def __init__(self, weight=None, size_average=True):
-        super(FocalTverskyLoss, self).__init__()
+    def __init__(self) -> None:
+        super().__init__()
 
-    def forward(self, inputs, targets, smooth=1, alpha=0.5, beta=0.5, gamma=1):
+    def forward(
+        self,
+        inputs: torch.Tensor,
+        targets: torch.Tensor,
+        smooth: float = 1.0,
+        alpha: float = 0.5,
+        beta: float = 0.5,
+        gamma: float = 1.0,
+    ) -> torch.Tensor:
         # comment out if your model contains a sigmoid or equivalent activation layer
         inputs = torch.nn.functional.sigmoid(inputs)
 
@@ -81,11 +87,11 @@ class FocalTverskyLoss(torch.nn.Module):
         targets = targets.view(-1)
 
         # True Positives, False Positives & False Negatives
-        TP = (inputs * targets).sum()
-        FP = ((1 - targets) * inputs).sum()
-        FN = (targets * (1 - inputs)).sum()
+        tp = (inputs * targets).sum()
+        fp = ((1 - targets) * inputs).sum()
+        fn = (targets * (1 - inputs)).sum()
 
-        Tversky = (TP + smooth) / (TP + alpha * FP + beta * FN + smooth)
-        FocalTversky = (1 - Tversky) ** gamma
+        tversky = (tp + smooth) / (tp + alpha * fp + beta * fn + smooth)
+        focal_tversky = (1 - tversky) ** gamma
 
-        return FocalTversky
+        return focal_tversky

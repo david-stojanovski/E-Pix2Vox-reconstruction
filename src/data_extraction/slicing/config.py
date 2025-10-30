@@ -41,12 +41,8 @@ __C.DATA_OUT.SAVE_BCKGD_CLR = "black"
 __C.DATA_OUT.FANCY_PLOT = False
 
 __C.PARAMETERS = edict()
-__C.PARAMETERS.SUBSAMPLE_FACTOR = (
-    20  # How much to subsample mesh for the low resolution, fast calculations
-)
-__C.PARAMETERS.THRESHOLD_PERCENTAGE = (
-    0.7  # Percentage of mesh to remove in order to speed up finding LV apex
-)
+__C.PARAMETERS.SUBSAMPLE_FACTOR = 20  # How much to subsample mesh for the low resolution, fast calculations
+__C.PARAMETERS.THRESHOLD_PERCENTAGE = 0.7  # Percentage of mesh to remove in order to speed up finding LV apex
 __C.PARAMETERS.NUM_WORKERS = 8  # Number of CPU cores to use for multiprocessing
 
 # The following are the labels used in the generation of the meshes from https://zenodo.org/record/4506930#.Yt_sZtLMJ1M

@@ -1,47 +1,45 @@
-# -*- coding: utf-8 -*-
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 
-import json
-import logging
 import os
+import json
 import random
-from datetime import datetime as dt
 from time import time
+from pathlib import Path
+from datetime import datetime as dt
 
 import torch
-import torch.backends.cudnn
-import torch.utils.data
-from tensorboardX import SummaryWriter
-
-import utils.data_loaders
-import utils.data_transforms
 import utils.helpers
-from core.test import test_net
+import torch.utils.data
+import utils.data_loaders
+import torch.backends.cudnn
+import utils.data_transforms
+from loguru import logger
+from tensorboardX import SummaryWriter
 from utils.average_meter import AverageMeter
 
+from core.test import test_net
 
-def train_net(cfg):
+
+def train_net(cfg) -> None:
     if cfg.NETWORK.MODEL_SIZE == 32:
+        from models.merger_32 import Merger
         from models.decoder_32 import Decoder
         from models.encoder_32 import Encoder
-        from models.merger_32 import Merger
         from models.refiner_32 import Refiner
     elif cfg.NETWORK.MODEL_SIZE == 64:
+        from models.merger_64 import Merger
         from models.decoder_64 import Decoder
         from models.encoder_64 import Encoder
-        from models.merger_64 import Merger
         from models.refiner_64 import Refiner
     elif cfg.NETWORK.MODEL_SIZE == 128:
+        from models.merger_128 import Merger
         from models.decoder_128 import Decoder
         from models.encoder_128 import Encoder
-        from models.merger_128 import Merger
         from models.refiner_128 import Refiner
     else:
-        raise Exception(
-            "[FATAL] %s No model available for size: %s. voxels"
-            % (dt.now(), cfg.NETWORK.MODEL_SIZE)
-        )
+        msg = f"[FATAL] {dt.now()} No model available for size: {cfg.NETWORK.MODEL_SIZE}. voxels"
+        raise Exception(msg)
 
     # Enable the inbuilt cudnn auto-tuner to find the best algorithm to use
     torch.backends.cudnn.benchmark = True
@@ -50,37 +48,22 @@ def train_net(cfg):
 
     train_transforms = utils.data_transforms.Compose(
         [
-            # utils.data_transforms.RandomCrop(IMG_SIZE, CROP_SIZE),
-            # utils.data_transforms.RandomBackground(cfg.TRAIN.RANDOM_BG_COLOR_RANGE),
-            utils.data_transforms.ColorJitter(
-                cfg.TRAIN.BRIGHTNESS, cfg.TRAIN.CONTRAST, cfg.TRAIN.SATURATION
-            ),
-            # utils.data_transforms.RandomNoise(cfg.TRAIN.NOISE_STD),
+            utils.data_transforms.ColorJitter(cfg.TRAIN.BRIGHTNESS, cfg.TRAIN.CONTRAST, cfg.TRAIN.SATURATION),
             utils.data_transforms.Normalize(mean=cfg.DATASET.MEAN, std=cfg.DATASET.STD),
-            # utils.data_transforms.RandomFlip(),
-            # utils.data_transforms.RandomPermuteRGB(),
             utils.data_transforms.ToTensor(),
         ]
     )
     val_transforms = utils.data_transforms.Compose(
         [
-            # utils.data_transforms.CenterCrop(IMG_SIZE, CROP_SIZE),
-            # utils.data_transforms.RandomBackground(cfg.TEST.RANDOM_BG_COLOR_RANGE),
-            utils.data_transforms.ColorJitter(
-                cfg.TRAIN.BRIGHTNESS, cfg.TRAIN.CONTRAST, cfg.TRAIN.SATURATION
-            ),
+            utils.data_transforms.ColorJitter(cfg.TRAIN.BRIGHTNESS, cfg.TRAIN.CONTRAST, cfg.TRAIN.SATURATION),
             utils.data_transforms.Normalize(mean=cfg.DATASET.MEAN, std=cfg.DATASET.STD),
             utils.data_transforms.ToTensor(),
         ]
     )
 
     # Set up data loader
-    train_dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[
-        cfg.DATASET.TRAIN_DATASET
-    ](cfg)
-    val_dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[
-        cfg.DATASET.TEST_DATASET
-    ](cfg)
+    train_dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[cfg.DATASET.TRAIN_DATASET](cfg)
+    val_dataset_loader = utils.data_loaders.DATASET_LOADER_MAPPING[cfg.DATASET.TEST_DATASET](cfg)
     train_data_loader = torch.utils.data.DataLoader(
         dataset=train_dataset_loader.get_dataset(
             utils.data_loaders.DatasetType.TRAIN,
@@ -110,18 +93,10 @@ def train_net(cfg):
     decoder = Decoder(cfg)
     refiner = Refiner(cfg)
     merger = Merger(cfg)
-    logging.debug(
-        "Parameters in Encoder: %d." % (utils.helpers.count_parameters(encoder))
-    )
-    logging.debug(
-        "Parameters in Decoder: %d." % (utils.helpers.count_parameters(decoder))
-    )
-    logging.debug(
-        "Parameters in Refiner: %d." % (utils.helpers.count_parameters(refiner))
-    )
-    logging.debug(
-        "Parameters in Merger: %d." % (utils.helpers.count_parameters(merger))
-    )
+    logger.debug(f"Parameters in Encoder: {utils.helpers.count_parameters(encoder)}.")
+    logger.debug(f"Parameters in Decoder: {utils.helpers.count_parameters(decoder)}.")
+    logger.debug(f"Parameters in Refiner: {utils.helpers.count_parameters(refiner)}.")
+    logger.debug(f"Parameters in Merger: {utils.helpers.count_parameters(merger)}.")
 
     # Initialize weights of networks
     encoder.apply(utils.helpers.init_weights)
@@ -173,9 +148,7 @@ def train_net(cfg):
             momentum=cfg.TRAIN.MOMENTUM,
         )
     else:
-        raise Exception(
-            "[FATAL] %s Unknown optimizer %s." % (dt.now(), cfg.TRAIN.POLICY)
-        )
+        raise Exception(f"[FATAL] {dt.now()} Unknown optimizer {cfg.TRAIN.POLICY}.")
 
     # Set up learning rate scheduler to decay learning rates dynamically
     encoder_lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
@@ -211,7 +184,7 @@ def train_net(cfg):
     best_iou = -1
     best_epoch = -1
     if "WEIGHTS" in cfg.CONST and cfg.TRAIN.RESUME_TRAIN:
-        logging.info("Recovering from %s ..." % (cfg.CONST.WEIGHTS))
+        logger.info(f"Recovering from {cfg.CONST.WEIGHTS} ...")
         checkpoint = torch.load(cfg.CONST.WEIGHTS)
         init_epoch = checkpoint["epoch_idx"]
         best_iou = checkpoint["best_iou"]
@@ -224,18 +197,15 @@ def train_net(cfg):
         if cfg.NETWORK.USE_MERGER:
             merger.load_state_dict(checkpoint["merger_state_dict"])
 
-        logging.info(
-            "Recover complete. Current epoch #%d, Best IoU = %.4f at epoch #%d."
-            % (init_epoch, best_iou, best_epoch)
-        )
+        logger.info(f"Recover complete. Current epoch #{init_epoch}, Best IoU = {best_iou:.4f} at epoch #{best_epoch}.")
 
     # Summary writer for TensorBoard
     output_dir = os.path.join(cfg.DIR.OUT_PATH, "%s", dt.now().isoformat())
 
     cfg.DIR.LOGS = output_dir % "logs"
     cfg.DIR.CHECKPOINTS = output_dir % "checkpoints"
-    train_writer = SummaryWriter(os.path.join(cfg.DIR.LOGS, "train"))
-    val_writer = SummaryWriter(os.path.join(cfg.DIR.LOGS, "test"))
+    train_writer = SummaryWriter(cfg.DIR.LOGS / "train")
+    val_writer = SummaryWriter(cfg.DIR.LOGS / "test")
 
     # Training loop
     for epoch_idx in range(init_epoch, cfg.TRAIN.NUM_EPOCHS):
@@ -257,8 +227,8 @@ def train_net(cfg):
         batch_end_time = time()
         n_batches = len(train_data_loader)
         for batch_idx, (
-            taxonomy_names,
-            sample_names,
+            _taxonomy_names,
+            _sample_names,
             rendering_images,
             ground_truth_volumes,
         ) in enumerate(train_data_loader):
@@ -279,10 +249,7 @@ def train_net(cfg):
                 generated_volumes = torch.mean(generated_volumes, dim=1)
             encoder_loss = loss_func(generated_volumes, ground_truth_volumes) * 10
 
-            if (
-                cfg.NETWORK.USE_REFINER
-                and epoch_idx >= cfg.TRAIN.EPOCH_START_USE_REFINER
-            ):
+            if cfg.NETWORK.USE_REFINER and epoch_idx >= cfg.TRAIN.EPOCH_START_USE_REFINER:
                 generated_volumes = refiner(generated_volumes)
                 refiner_loss = loss_func(generated_volumes, ground_truth_volumes) * 10
             else:
@@ -294,10 +261,7 @@ def train_net(cfg):
             refiner.zero_grad()
             merger.zero_grad()
 
-            if (
-                cfg.NETWORK.USE_REFINER
-                and epoch_idx >= cfg.TRAIN.EPOCH_START_USE_REFINER
-            ):
+            if cfg.NETWORK.USE_REFINER and epoch_idx >= cfg.TRAIN.EPOCH_START_USE_REFINER:
                 encoder_loss.backward(retain_graph=True)
                 refiner_loss.backward()
             else:
@@ -313,16 +277,14 @@ def train_net(cfg):
             refiner_losses.update(refiner_loss.item())
             # Append loss to TensorBoard
             n_itr = epoch_idx * n_batches + batch_idx
-            train_writer.add_scalar(
-                "EncoderDecoder/BatchLoss", encoder_loss.item(), n_itr
-            )
+            train_writer.add_scalar("EncoderDecoder/BatchLoss", encoder_loss.item(), n_itr)
             train_writer.add_scalar("Refiner/BatchLoss", refiner_loss.item(), n_itr)
 
             # Tick / tock
             batch_time.update(time() - batch_end_time)
             batch_end_time = time()
-            logging.info(
-                "[Epoch %d/%d][Batch %d/%d] BatchTime = %.3f (s) DataTime = %.3f (s) EDLoss = %.4f RLoss = %.4f"
+            logger.info(
+                f"[Epoch {epoch_idx + 1}/{cfg.TRAIN.NUM_EPOCHS}][Batch {batch_idx + 1}/{n_batches}] "
                 % (
                     epoch_idx + 1,
                     cfg.TRAIN.NUM_EPOCHS,
@@ -342,32 +304,20 @@ def train_net(cfg):
         merger_lr_scheduler.step()
 
         # Append epoch loss to TensorBoard
-        train_writer.add_scalar(
-            "EncoderDecoder/EpochLoss", encoder_losses.avg, epoch_idx + 1
-        )
+        train_writer.add_scalar("EncoderDecoder/EpochLoss", encoder_losses.avg, epoch_idx + 1)
         train_writer.add_scalar("Refiner/EpochLoss", refiner_losses.avg, epoch_idx + 1)
 
         # Tick / tock
         epoch_end_time = time()
-        logging.info(
-            "[Epoch %d/%d] EpochTime = %.3f (s) EDLoss = %.4f RLoss = %.4f"
-            % (
-                epoch_idx + 1,
-                cfg.TRAIN.NUM_EPOCHS,
-                epoch_end_time - epoch_start_time,
-                encoder_losses.avg,
-                refiner_losses.avg,
-            )
+        logger.info(
+            f"[Epoch {epoch_idx + 1}/{cfg.TRAIN.NUM_EPOCHS}] EpochTime = {epoch_end_time - epoch_start_time:.3f} (s) EDLoss = {encoder_losses.avg:.4f} RLoss = {refiner_losses.avg:.4f}"
         )
 
         # Update Rendering Views
         if cfg.TRAIN.UPDATE_N_VIEWS_RENDERING:
             n_views_rendering = random.randint(1, cfg.CONST.N_VIEWS_RENDERING)
             train_data_loader.dataset.set_n_views_rendering(n_views_rendering)
-            logging.info(
-                "Epoch [%d/%d] Update #RenderingViews to %d"
-                % (epoch_idx + 2, cfg.TRAIN.NUM_EPOCHS, n_views_rendering)
-            )
+            logger.info(f"Epoch [{epoch_idx + 2}/{cfg.TRAIN.NUM_EPOCHS}] Update #RenderingViews to {n_views_rendering}")
 
         # Validate the training models
         iou = test_net(
@@ -383,19 +333,17 @@ def train_net(cfg):
 
         # Save weights to file
         if (epoch_idx + 1) % cfg.TRAIN.SAVE_FREQ == 0 or iou > best_iou:
-            file_name = "checkpoint-epoch-%03d.pth" % (epoch_idx + 1)
+            file_name = f"checkpoint-epoch-{epoch_idx + 1:03d}.pth"
             if iou > best_iou:
                 best_iou = iou
                 best_epoch = epoch_idx
                 file_name = "checkpoint-best.pth"
 
-            output_path = os.path.join(cfg.DIR.CHECKPOINTS, file_name)
-            if not os.path.exists(cfg.DIR.CHECKPOINTS):
-                os.makedirs(cfg.DIR.CHECKPOINTS)
+            output_path = cfg.DIR.CHECKPOINTS / file_name
+            if not output_path.parent.exists():
+                output_path.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(
-                os.path.join(cfg.DIR.OUT_PATH, "train_test_config.json"), "w"
-            ) as fp:
+            with Path.open(cfg.DIR.OUT_PATH / "train_test_config.json", "w") as fp:
                 json.dump(cfg, fp, indent=4)
                 fp.close()
 
@@ -412,7 +360,7 @@ def train_net(cfg):
                 checkpoint["merger_state_dict"] = merger.state_dict()
 
             torch.save(checkpoint, output_path)
-            logging.info("Saved checkpoint to %s ..." % output_path)
+            logger.info(f"Saved checkpoint to {output_path} ...")
 
     # Close SummaryWriter for TensorBoard
     train_writer.close()

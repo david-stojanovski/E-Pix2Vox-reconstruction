@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 import torch
 
 
 class Merger(torch.nn.Module):
-    def __init__(self, cfg):
-        super(Merger, self).__init__()
+    def __init__(self, cfg) -> None:
+        super().__init__()
         self.cfg = cfg
 
         # Layer Definition

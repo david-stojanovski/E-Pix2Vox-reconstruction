@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Developed by Haozhe Xie <cshzxie@gmail.com>
 #
@@ -10,14 +9,12 @@ import torchvision.models
 
 
 class Encoder(torch.nn.Module):
-    def __init__(self, cfg):
-        super(Encoder, self).__init__()
+    def __init__(self, cfg) -> None:
+        super().__init__()
         self.cfg = cfg
 
         # Layer Definition
-        resnet = torchvision.models.resnet50(
-            weights=torchvision.models.ResNet50_Weights.DEFAULT
-        )
+        resnet = torchvision.models.resnet50(weights=torchvision.models.ResNet50_Weights.DEFAULT)
         self.resnet = torch.nn.Sequential(
             *[
                 resnet.conv1,
@@ -48,9 +45,7 @@ class Encoder(torch.nn.Module):
             torch.nn.ELU(),
         )
         self.layer4 = torch.nn.Sequential(
-            torch.nn.Conv3d(
-                int(cfg.CONST.N_VIEWS_RENDERING), 1, kernel_size=3, padding=1
-            ),
+            torch.nn.Conv3d(int(cfg.CONST.N_VIEWS_RENDERING), 1, kernel_size=3, padding=1),
             torch.nn.BatchNorm3d(1),
             torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
         )

@@ -1,20 +1,20 @@
-# -*- coding: utf-8 -*-
 # @Author: Haozhe Xie
 # @Date:   2019-09-27 16:17:28
 # @Last Modified by:   Haozhe Xie
 # @Last Modified time: 2019-09-29 03:21:29
 # @Email:  cshzxie@gmail.com
 
-import bpy
-import cv2
+import os
+import sys
 import json
 import math
-import mathutils
-import numpy as np
-import os
 import random
 import shutil
-import sys
+
+import bpy
+import cv2
+import numpy as np
+import mathutils
 
 
 def parent_obj_to_camera(b_camera, origin):
@@ -100,7 +100,7 @@ for sk in skeletons:
 category_mapping = {}
 with open(CATEGORY_MAPPING) as f:
     # Ignore first five lines
-    for i in range(6):
+    for _i in range(6):
         line = f.readline()
     while line:
         line = line.split(",")
@@ -130,8 +130,7 @@ for lvl_idx, lvl in enumerate(levels):
                 }
             )
         else:
-            if not node["type"] == "Object":
-                print("Unknown Node Type: %s" % node["type"])
+            if node["type"] != "Object":
                 continue
             objects[node["id"]] = {
                 "model_id": node["modelId"],
@@ -169,9 +168,9 @@ cam_constraint.track_axis = "TRACK_NEGATIVE_Z"
 cam_constraint.up_axis = "UP_Y"
 
 # Put objects in rooms
-for r_idx, r in enumerate(rooms):
+for _r_idx, r in enumerate(rooms):
     # Setup the wall and ground
-    wall_obj = rooms[r_idx]["model_id"]
+    wall_obj = r["model_id"]
     # bpy.ops.import_scene.obj(filepath=os.path.join(ROOM_FOLDER, '%sc.obj' % wall_obj))
     # bpy.ops.import_scene.obj(filepath=os.path.join(ROOM_FOLDER, '%sf.obj' % wall_obj))
     # bpy.ops.import_scene.obj(filepath=os.path.join(ROOM_FOLDER, '%sw.obj' % wall_obj))
@@ -180,24 +179,16 @@ for r_idx, r in enumerate(rooms):
         obj_key = "%d_%d" % (r["lvl_idx"], ni)
         if obj_key not in objects:
             continue
-        #
         obj = objects[obj_key]
-        obj_name = "Model%s" % obj_key
+        obj_name = f"Model{obj_key}"
         model_id = obj["model_id"]
         category = category_mapping[model_id]
         if category in ["03063968", "05217688"]:
             continue
-        #
-        category = (
-            PARENT_CATEGORY_MAPPING[category]
-            if category in PARENT_CATEGORY_MAPPING
-            else category
-        )
+        category = PARENT_CATEGORY_MAPPING.get(category, category)
         obj["category"] = category
         # Get the size of the original object
-        bpy.ops.import_scene.obj(
-            filepath=os.path.join(OBJECT_FOLDER, model_id, "%s.obj" % model_id)
-        )
+        bpy.ops.import_scene.obj(filepath=os.path.join(OBJECT_FOLDER, model_id, f"{model_id}.obj"))
         bpy.context.selected_objects[0].name = obj_name
         bound_box = np.array([v[:] for v in bpy.data.objects[obj_name].bound_box])
         z_min = np.min(bound_box, axis=0)[1]
@@ -211,7 +202,6 @@ for r_idx, r in enumerate(rooms):
         ]:
             bpy.data.objects[obj_name].select = True
             bpy.ops.object.delete()
-        #
         scale = 1
         try_times = 0
         is_fitted = False
@@ -224,17 +214,13 @@ for r_idx, r in enumerate(rooms):
         ):
             model_id = random.choice(SHAPENET_OBJECTS[category])
             obj["model_id"] = model_id
-            bpy.ops.import_scene.obj(
-                filepath=os.path.join(SHAPENET_FOLDER, category, model_id, "model.obj")
-            )
+            bpy.ops.import_scene.obj(filepath=os.path.join(SHAPENET_FOLDER, category, model_id, "model.obj"))
             # Merge multiple meshes into one
             _objects = bpy.context.selected_objects
             ctx = bpy.context.copy()
             ctx["active_object"] = _objects[0]
             ctx["selected_objects"] = _objects
-            ctx["selected_editable_bases"] = [
-                scene.object_bases[ob.name] for ob in _objects
-            ]
+            ctx["selected_editable_bases"] = [scene.object_bases[ob.name] for ob in _objects]
             bpy.ops.object.join(ctx)
             bpy.context.selected_objects[0].name = obj_name
             # Get the size of the imported object
@@ -261,11 +247,8 @@ for r_idx, r in enumerate(rooms):
                 )
             )
             bpy.data.objects[obj_name].data.update()
-            _bound_box = np.array([v[:] for v in bpy.data.objects[obj_name].bound_box])[
-                ::-1
-            ]
+            _bound_box = np.array([v[:] for v in bpy.data.objects[obj_name].bound_box])[::-1]
             _size = (np.max(_bound_box, axis=0) - np.min(_bound_box, axis=0)) * scale
-            print(size, _size, _size - size, np.sum((_size - size) <= SIZE_DIFF_LIMIT))
             if np.sum((_size - size) <= SIZE_DIFF_LIMIT) == 3:
                 is_fitted = True
             else:
@@ -274,9 +257,7 @@ for r_idx, r in enumerate(rooms):
         # Fallback to the original 3D model
         if not is_fitted and try_times >= MAX_TRY_TIMES:
             bpy.ops.import_scene.obj(
-                filepath=os.path.join(
-                    OBJECT_FOLDER, fallback_model_id, "%s.obj" % fallback_model_id
-                )
+                filepath=os.path.join(OBJECT_FOLDER, fallback_model_id, f"{fallback_model_id}.obj")
             )
             bpy.context.selected_objects[0].name = obj_name
         # Apply the transform to the object
@@ -313,34 +294,27 @@ for r_idx, r in enumerate(rooms):
 
 bpy.ops.object.origin_set(type="ORIGIN_CURSOR")
 # Rendering for objects in rooms
-for r_idx, r in enumerate(rooms):
+for _r_idx, r in enumerate(rooms):
     for ni in r["node_indices"]:
         obj_key = "%d_%d" % (r["lvl_idx"], ni)
         if obj_key not in objects:
             continue
-        #
         obj = objects[obj_key]
-        obj_name = "Model%s" % obj_key
+        obj_name = f"Model{obj_key}"
         model_id = obj["model_id"]
         if "category" not in obj or len(model_id) < 8:
             continue
-        #
         category = obj["category"]
         # Skip not accepted categories
-        print(category, obj_name, model_id)
         if category not in ACCEPTED_CATEGORIES or obj_name not in bpy.data.objects:
             continue
         # Get object center
         obj_center = (np.array(obj["bbox"]["max"]) + np.array(obj["bbox"]["min"])) / 2
         # Set up light
-        sun_empty = parent_obj_to_camera(
-            sun, (obj_center[0], -obj_center[2], obj_center[1])
-        )
+        sun_empty = parent_obj_to_camera(sun, (obj_center[0], -obj_center[2], obj_center[1]))
         lamp_constraint.target = sun_empty
         # Set up camera
-        cam_empty = parent_obj_to_camera(
-            cam, (obj_center[0], -obj_center[2], obj_center[1])
-        )
+        cam_empty = parent_obj_to_camera(cam, (obj_center[0], -obj_center[2], obj_center[1]))
         cam_constraint.target = cam_empty
         # Set up output folder
         output_folder = os.path.join(OUTPUT_FOLDER, category, model_id, scene_id)
@@ -357,22 +331,22 @@ for r_idx, r in enumerate(rooms):
             cam_empty.rotation_euler = rotation_euler
             cam.location = sun.location
             # Switch to global view and render
-            final_file_path = "/tmp/%s_%s_%s_final.png" % (model_id, scene_id, az)
+            final_file_path = f"/tmp/{model_id}_{scene_id}_{az}_final.png"
             scene.render.filepath = final_file_path
             bpy.ops.render.render(write_still=True)
             # Switch to local view and render
             ## Set all objects to invisible
-            for _object_name, _object in bpy.data.objects.items():
+            for _object in bpy.data.objects.values():
                 _object.hide_render = True
             ## Set current object to visible
             bpy.data.objects[obj_name].hide_render = False
             sun.hide_render = False
             ## Render the current object
-            clean_file_path = "/tmp/%s_%s_%s_clean.png" % (model_id, scene_id, az)
+            clean_file_path = f"/tmp/{model_id}_{scene_id}_{az}_clean.png"
             scene.render.filepath = clean_file_path
             bpy.ops.render.render(write_still=True)
             # Set all object to visible
-            for _object_name, _object in bpy.data.objects.items():
+            for _object in bpy.data.objects.values():
                 _object.hide_render = False
             # Check if current view is occluded
             clean_img = cv2.imread(clean_file_path, -1)
