@@ -26,11 +26,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff>=0.1.0"]
-
+dev = ["ruff>=0.1.0", "pre-commit>=4.3.0,<5", "pre-commit-hooks>=6.0.0,<7", "pydantic>=2.12,<3"]
 
 [tool.pixi.workspace]
-channels = ["conda-forge"]
+channels = ["conda-forge", "main"]
 platforms = ["linux-64"]
 
 [build-system]
