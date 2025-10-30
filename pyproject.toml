@@ -1,6 +1,6 @@
 [project]
 name = "epivox"
-version = "0.1.0"
+version = "1.0.0"
 description = "E-Pix2Vox reconstruction project"
 readme = "README.md"
 license-files = ["LICENSE"]
