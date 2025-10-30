@@ -15,32 +15,44 @@ class Encoder(torch.nn.Module):
         self.cfg = cfg
 
         # Layer Definition
-        resnet = torchvision.models.resnet50(weights=torchvision.models.ResNet50_Weights.DEFAULT)
-        self.resnet = torch.nn.Sequential(*[
-            resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool, resnet.layer1, resnet.layer2, resnet.layer3,
-            resnet.layer4
-        ])[:6]
+        resnet = torchvision.models.resnet50(
+            weights=torchvision.models.ResNet50_Weights.DEFAULT
+        )
+        self.resnet = torch.nn.Sequential(
+            *[
+                resnet.conv1,
+                resnet.bn1,
+                resnet.relu,
+                resnet.maxpool,
+                resnet.layer1,
+                resnet.layer2,
+                resnet.layer3,
+                resnet.layer4,
+            ]
+        )[:6]
         self.layer1 = torch.nn.Sequential(
             torch.nn.Conv2d(512, 512, kernel_size=3, padding=1),
             torch.nn.BatchNorm2d(512),
-            torch.nn.ReLU()
+            torch.nn.ReLU(),
         )
         self.layer2 = torch.nn.Sequential(
             torch.nn.Conv2d(512, 256, kernel_size=3, padding=1),
             torch.nn.BatchNorm2d(256),
             torch.nn.ReLU(),
-            torch.nn.MaxPool2d(kernel_size=2)
+            torch.nn.MaxPool2d(kernel_size=2),
         )
         self.layer3 = torch.nn.Sequential(
             torch.nn.Conv2d(256, 256, kernel_size=3, padding=1),
             torch.nn.BatchNorm2d(256),
             torch.nn.ReLU(),
-            torch.nn.MaxPool2d(kernel_size=2)
+            torch.nn.MaxPool2d(kernel_size=2),
         )
         self.layer4 = torch.nn.Sequential(
-            torch.nn.Conv3d(int(cfg.CONST.N_VIEWS_RENDERING), 1, kernel_size=3, padding=1),
+            torch.nn.Conv3d(
+                int(cfg.CONST.N_VIEWS_RENDERING), 1, kernel_size=3, padding=1
+            ),
             torch.nn.BatchNorm3d(1),
-            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE)
+            torch.nn.LeakyReLU(cfg.NETWORK.LEAKY_VALUE),
         )
 
     def forward(self, rendering_images):

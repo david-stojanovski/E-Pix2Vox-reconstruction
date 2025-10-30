@@ -22,15 +22,17 @@ def save_plane_img(cfg, transformed_slice, save_loc):
     """
     transformed_slice = pv.wrap(transformed_slice)
 
-    transformed_slice.plot(cpos='xy',
-                           off_screen=True,
-                           show_axes=False,
-                           window_size=cfg.DATA_OUT.SAVE_IMG_RESOLUTION,
-                           background=cfg.DATA_OUT.SAVE_BCKGD_CLR,
-                           anti_aliasing=False,
-                           screenshot=save_loc,
-                           scalars=cfg.LABELS.LABEL_NAME,
-                           show_scalar_bar=False)
+    transformed_slice.plot(
+        cpos="xy",
+        off_screen=True,
+        show_axes=False,
+        window_size=cfg.DATA_OUT.SAVE_IMG_RESOLUTION,
+        background=cfg.DATA_OUT.SAVE_BCKGD_CLR,
+        anti_aliasing=False,
+        screenshot=save_loc,
+        scalars=cfg.LABELS.LABEL_NAME,
+        show_scalar_bar=False,
+    )
     return
 
 
@@ -45,7 +47,9 @@ def subsample_mesh(cfg, in_mesh):
     Returns:
         pyvista.core.pointset.UnstructuredGrid: Lower resolution subsampled mesh.
     """
-    return in_mesh.extract_cells(range(0, in_mesh.n_cells, cfg.PARAMETERS.SUBSAMPLE_FACTOR))
+    return in_mesh.extract_cells(
+        range(0, in_mesh.n_cells, cfg.PARAMETERS.SUBSAMPLE_FACTOR)
+    )
 
 
 def prepare_meshes(cfg, mesh_path):
@@ -61,10 +65,12 @@ def prepare_meshes(cfg, mesh_path):
         resolution mesh and subsampled mesh.
     """
     case_mesh = pv.get_reader(mesh_path).read()
-    case_mesh = pv.wrap(case_mesh).threshold((cfg.LABELS.AORTA, cfg.LABELS.AORTA),
-                                             invert=True,
-                                             scalars=cfg.LABELS.LABEL_NAME,
-                                             preference='cell')
+    case_mesh = pv.wrap(case_mesh).threshold(
+        (cfg.LABELS.AORTA, cfg.LABELS.AORTA),
+        invert=True,
+        scalars=cfg.LABELS.LABEL_NAME,
+        preference="cell",
+    )
 
     origin_centred_mesh = maths_utils.translate_mesh_to_origin(case_mesh)
     low_res_mesh = subsample_mesh(cfg, origin_centred_mesh)
@@ -72,7 +78,7 @@ def prepare_meshes(cfg, mesh_path):
 
 
 def slice_with_plane(in_mesh, origin, normal):
-    """ Slices a surface mesh with a given origin and normal that defines a slicing plane.
+    """Slices a surface mesh with a given origin and normal that defines a slicing plane.
 
     Args:
         in_mesh (obj): Mesh for slicing.
@@ -104,13 +110,16 @@ def find_lv_apex(cfg, subsampled_mesh):
         Tuple[pyvista.core.pyvista_ndarray.pyvista_ndarray, numpy.ndarray]: Initial LV apex coordinates and valid points
         found in the left ventricle for performing the more computationally expensive ray trace LV apex search
     """
-    mitral_valve_centroid = calc_label_com(cfg, subsampled_mesh, cfg.LABELS.MITRAL_VALVE)
-    lv_points = pv.wrap(cell_threshold(cfg,
-                                       subsampled_mesh,
-                                       start=cfg.LABELS.LV,
-                                       end=cfg.LABELS.LV)).points
+    mitral_valve_centroid = calc_label_com(
+        cfg, subsampled_mesh, cfg.LABELS.MITRAL_VALVE
+    )
+    lv_points = pv.wrap(
+        cell_threshold(cfg, subsampled_mesh, start=cfg.LABELS.LV, end=cfg.LABELS.LV)
+    ).points
 
-    norm_dist = distance.cdist(np.atleast_2d(mitral_valve_centroid), lv_points, 'euclidean').T
+    norm_dist = distance.cdist(
+        np.atleast_2d(mitral_valve_centroid), lv_points, "euclidean"
+    ).T
     max_indice = np.argmax(norm_dist)
 
     apex_coord = lv_points[max_indice, :]
@@ -137,31 +146,41 @@ def find_lv_apex_raytrace(cfg, in_mesh, subsampled_mesh):
     Returns:
         lv_apex_coords (numpy.ndarray): Accurate coordinates of the left ventricular apex.
     """
-    lv_mesh = pv.wrap(in_mesh).threshold((cfg.LABELS.LV, cfg.LABELS.LV),
-                                         invert=True,
-                                         scalars=cfg.LABELS.LABEL_NAME,
-                                         preference='cell')
+    lv_mesh = pv.wrap(in_mesh).threshold(  # noqa: F841
+        (cfg.LABELS.LV, cfg.LABELS.LV),
+        invert=True,
+        scalars=cfg.LABELS.LABEL_NAME,
+        preference="cell",
+    )
 
-    mitral_valve_centroid = calc_label_com(cfg, subsampled_mesh, cfg.LABELS.MITRAL_VALVE)
+    mitral_valve_centroid = calc_label_com(
+        cfg, subsampled_mesh, cfg.LABELS.MITRAL_VALVE
+    )
 
     obb_tree = vtk.vtkOBBTree()
     obb_tree.SetDataSet(in_mesh.extract_surface())
     obb_tree.BuildLocator()
     points_intersection = vtk.vtkPoints()
 
-    __, threshold_points = find_lv_apex(cfg, subsampled_mesh)  # find fast but inaccurate lv location as starting point
+    __, threshold_points = find_lv_apex(
+        cfg, subsampled_mesh
+    )  # find fast but inaccurate lv location as starting point
 
     points_of_intersection = []
     for ii in range(len(threshold_points)):
-        code = obb_tree.IntersectWithLine(mitral_valve_centroid,
-                                          threshold_points[ii],
-                                          points_intersection,
-                                          None)  # looks like it isn't called but it is important and must be.
+        code = obb_tree.IntersectWithLine(  # noqa: F841
+            mitral_valve_centroid,
+            threshold_points[ii],
+            points_intersection,
+            None,
+        )  # looks like it isn't called but it is important and must be.
 
         points_vtk_intersection_data = points_intersection.GetData()
         num_points_intersection = points_vtk_intersection_data.GetNumberOfTuples()
 
-        if num_points_intersection == 2:  # this means the ray has gone through both endo and epicardium
+        if (
+            num_points_intersection == 2
+        ):  # this means the ray has gone through both endo and epicardium
             for idx in range(num_points_intersection):
                 _tup0 = points_vtk_intersection_data.GetTuple3(0)
                 _tup1 = points_vtk_intersection_data.GetTuple3(1)
@@ -169,7 +188,10 @@ def find_lv_apex_raytrace(cfg, in_mesh, subsampled_mesh):
 
     points_of_intersection = np.squeeze(points_of_intersection)
     thinnest_point = np.argmax(
-        np.linalg.norm([points_of_intersection[:, 0, :] - points_of_intersection[:, 1, :]], axis=2))
+        np.linalg.norm(
+            [points_of_intersection[:, 0, :] - points_of_intersection[:, 1, :]], axis=2
+        )
+    )
     lv_apex_coords = points_of_intersection[thinnest_point, 1, :]
     return lv_apex_coords
 
@@ -185,14 +207,20 @@ def calc_label_com(cfg, in_mesh, label):
         numpy.ndarray: Centre of mass of selected label.
     """
     if isinstance(label, int):
-        return pv.wrap(cell_threshold(cfg, in_mesh, start=label, end=label)).center_of_mass()
+        return pv.wrap(
+            cell_threshold(cfg, in_mesh, start=label, end=label)
+        ).center_of_mass()
     else:
-        return [pv.wrap(cell_threshold(cfg, in_mesh, start=label_val, end=label_val)).center_of_mass() for label_val in
-                label]
+        return [
+            pv.wrap(
+                cell_threshold(cfg, in_mesh, start=label_val, end=label_val)
+            ).center_of_mass()
+            for label_val in label
+        ]
 
 
 def fancy_plot(cfg, transformed_slice, transformed_mesh):
-    """ Function to visualize how each standard view actually slices through the heart in 3D.
+    """Function to visualize how each standard view actually slices through the heart in 3D.
 
     Args:
         cfg (easydict.EasyDict): Configuration file.
@@ -205,25 +233,35 @@ def fancy_plot(cfg, transformed_slice, transformed_mesh):
     bounds[2] = -90
     bounds[3] = 90
 
-    plane_translation_delta = np.mean(transformed_slice.points, axis=0)[2] - 0.1  # slight offset for visualization
-    true_plane = pv.Plane(center=(0, 0, plane_translation_delta),
-                          direction=(0, 0, 1),
-                          i_size=(bounds[1] - bounds[0]),
-                          j_size=bounds[3] - bounds[2])
+    plane_translation_delta = (
+        np.mean(transformed_slice.points, axis=0)[2] - 0.1
+    )  # slight offset for visualization
+    true_plane = pv.Plane(
+        center=(0, 0, plane_translation_delta),
+        direction=(0, 0, 1),
+        i_size=(bounds[1] - bounds[0]),
+        j_size=bounds[3] - bounds[2],
+    )
 
     plotter = pv.Plotter()
-    plotter.add_mesh(transformed_slice,  # Extracted slice
-                     scalars=cfg.LABELS.LABEL_NAME,
-                     smooth_shading=True,
-                     show_scalar_bar=False)
-    plotter.add_mesh(true_plane,  # Blank plane
-                     color=cfg.DATA_OUT.SAVE_BCKGD_CLR,
-                     smooth_shading=True)
-    plotter.add_mesh(transformed_mesh,  # Cardiac mesh
-                     style='wireframe',
-                     color='white',
-                     smooth_shading=True,
-                     opacity=0.15)
+    plotter.add_mesh(
+        transformed_slice,  # Extracted slice
+        scalars=cfg.LABELS.LABEL_NAME,
+        smooth_shading=True,
+        show_scalar_bar=False,
+    )
+    plotter.add_mesh(
+        true_plane,  # Blank plane
+        color=cfg.DATA_OUT.SAVE_BCKGD_CLR,
+        smooth_shading=True,
+    )
+    plotter.add_mesh(
+        transformed_mesh,  # Cardiac mesh
+        style="wireframe",
+        color="white",
+        smooth_shading=True,
+        opacity=0.15,
+    )
     plotter.show()
     return
 
@@ -242,7 +280,9 @@ def cell_threshold(cfg, in_mesh, start, end):
     """
     threshold = vtk.vtkThreshold()
     threshold.SetInputData(in_mesh)
-    threshold.SetInputArrayToProcess(0, 0, 0, vtk.vtkDataObject.FIELD_ASSOCIATION_CELLS, cfg.LABELS.LABEL_NAME)
+    threshold.SetInputArrayToProcess(
+        0, 0, 0, vtk.vtkDataObject.FIELD_ASSOCIATION_CELLS, cfg.LABELS.LABEL_NAME
+    )
     threshold.ThresholdBetween(start, end)
     threshold.Update()
     surfer = vtk.vtkDataSetSurfaceFilter()
@@ -260,7 +300,9 @@ def get_2ch(cfg, subsampled_mesh, lv_apex):
     rv_points = calc_label_com(cfg, subsampled_mesh, label=cfg.LABELS.RV)
     mv_points = calc_label_com(cfg, subsampled_mesh, label=cfg.LABELS.MITRAL_VALVE)
 
-    __, out_pnts = maths_utils.pnt2line(tuple(rv_points), tuple(lv_apex), tuple(mv_points))
+    __, out_pnts = maths_utils.pnt2line(
+        tuple(rv_points), tuple(lv_apex), tuple(mv_points)
+    )
 
     out_vec = np.squeeze(rv_points - np.array(out_pnts))
 
@@ -269,41 +311,83 @@ def get_2ch(cfg, subsampled_mesh, lv_apex):
 
 def get_rv_inflow(cfg, subsampled_mesh, right_atrium_mesh_pnts):
     """Calculates Right ventricle inflow view coordinates for slicing."""
-    rv_pv_pnts = (calc_label_com(cfg, subsampled_mesh, label=[cfg.LABELS.RV, cfg.LABELS.PULMONARY_VALVE]))
+    rv_pv_pnts = calc_label_com(
+        cfg, subsampled_mesh, label=[cfg.LABELS.RV, cfg.LABELS.PULMONARY_VALVE]
+    )
     rv_inflow_pnts = np.vstack((rv_pv_pnts, right_atrium_mesh_pnts))
-    return maths_utils.plane_equation_calc(rv_inflow_pnts), np.mean(rv_inflow_pnts, axis=0)
+    return maths_utils.plane_equation_calc(rv_inflow_pnts), np.mean(
+        rv_inflow_pnts, axis=0
+    )
 
 
 def get_lv_plax(cfg, subsampled_mesh, aortic_valve_mesh_pnts):
     """Calculates left ventricle parasternal long axis view coordinates for slicing."""
     lv_plax_pnts = np.vstack(
-        (calc_label_com(cfg, subsampled_mesh, label=[cfg.LABELS.LV, cfg.LABELS.MITRAL_VALVE]),
-         aortic_valve_mesh_pnts))
+        (
+            calc_label_com(
+                cfg, subsampled_mesh, label=[cfg.LABELS.LV, cfg.LABELS.MITRAL_VALVE]
+            ),
+            aortic_valve_mesh_pnts,
+        )
+    )
     return maths_utils.plane_equation_calc(lv_plax_pnts), np.mean(lv_plax_pnts, axis=0)
 
 
-def get_psax_aortic(left_atrium_mesh_pnts, right_atrium_mesh_pnts, aortic_valve_mesh_pnts):
+def get_psax_aortic(
+    left_atrium_mesh_pnts, right_atrium_mesh_pnts, aortic_valve_mesh_pnts
+):
     """Calculates aortic valve level parasternal short axis view coordinates for slicing."""
-    psax_aortic_pnts = np.vstack((left_atrium_mesh_pnts, right_atrium_mesh_pnts, aortic_valve_mesh_pnts))
-    return maths_utils.plane_equation_calc(psax_aortic_pnts), np.mean(psax_aortic_pnts, axis=0)
+    psax_aortic_pnts = np.vstack(
+        (left_atrium_mesh_pnts, right_atrium_mesh_pnts, aortic_valve_mesh_pnts)
+    )
+    return maths_utils.plane_equation_calc(psax_aortic_pnts), np.mean(
+        psax_aortic_pnts, axis=0
+    )
 
 
 def get_psax_mv(vert_vec, heart_com, lv_apex):
     """Calculates mitral valve level parasternal short axis view coordinates for slicing."""
-    psax_mv_normal = maths_utils.find_plane_from_normal(vert_vec, -0.25 * (heart_com + lv_apex))
-    return tuple([psax_mv_normal, np.mean(np.squeeze(maths_utils.find_points_on_plane(psax_mv_normal)), axis=0)])
+    psax_mv_normal = maths_utils.find_plane_from_normal(
+        vert_vec, -0.25 * (heart_com + lv_apex)
+    )
+    return tuple(
+        [
+            psax_mv_normal,
+            np.mean(
+                np.squeeze(maths_utils.find_points_on_plane(psax_mv_normal)), axis=0
+            ),
+        ]
+    )
 
 
 def get_psax_pm(vert_vec, heart_com, lv_apex):
     """Calculates papillary muscle level parasternal short axis view coordinates for slicing."""
-    psax_pm_normal = maths_utils.find_plane_from_normal(vert_vec, -0.75 * (heart_com + lv_apex))
-    return tuple([psax_pm_normal, np.mean(np.squeeze(maths_utils.find_points_on_plane(psax_pm_normal)), axis=0)])
+    psax_pm_normal = maths_utils.find_plane_from_normal(
+        vert_vec, -0.75 * (heart_com + lv_apex)
+    )
+    return tuple(
+        [
+            psax_pm_normal,
+            np.mean(
+                np.squeeze(maths_utils.find_points_on_plane(psax_pm_normal)), axis=0
+            ),
+        ]
+    )
 
 
 def get_psax_lower(vert_vec, heart_com, lv_apex):
     """Calculates lower level parasternal short axis view coordinates for slicing."""
-    psax_lower_normal = maths_utils.find_plane_from_normal(vert_vec, -0.85 * (heart_com + lv_apex))
-    return tuple([psax_lower_normal, np.mean(np.squeeze(maths_utils.find_points_on_plane(psax_lower_normal)), axis=0)])
+    psax_lower_normal = maths_utils.find_plane_from_normal(
+        vert_vec, -0.85 * (heart_com + lv_apex)
+    )
+    return tuple(
+        [
+            psax_lower_normal,
+            np.mean(
+                np.squeeze(maths_utils.find_points_on_plane(psax_lower_normal)), axis=0
+            ),
+        ]
+    )
 
 
 def get_a4c(left_atrium_mesh_pnts, right_atrium_mesh_pnts, lv_apex):
@@ -335,34 +419,38 @@ def get_cardiac_images(cfg, in_mesh, subsampled_mesh):
 
     l_atrium_points = calc_label_com(cfg, subsampled_mesh, label=cfg.LABELS.LA)
     r_atrium_points = calc_label_com(cfg, subsampled_mesh, label=cfg.LABELS.RA)
-    aortic_valve_points = calc_label_com(cfg, subsampled_mesh, label=cfg.LABELS.AORTIC_VALVE)
+    aortic_valve_points = calc_label_com(
+        cfg, subsampled_mesh, label=cfg.LABELS.AORTIC_VALVE
+    )
 
     returned_points4imgs = []
-    if 'rv_inflow' in cfg.DATA_OUT.SELECTED_VIEWS:
+    if "rv_inflow" in cfg.DATA_OUT.SELECTED_VIEWS:
         rv_inflow = get_rv_inflow(cfg, subsampled_mesh, r_atrium_points)
         returned_points4imgs += [rv_inflow]
-    if 'lv_plax' in cfg.DATA_OUT.SELECTED_VIEWS:
+    if "lv_plax" in cfg.DATA_OUT.SELECTED_VIEWS:
         lv_plax = get_lv_plax(cfg, subsampled_mesh, aortic_valve_points)
         returned_points4imgs += [lv_plax]
-    if 'psax_aortic' in cfg.DATA_OUT.SELECTED_VIEWS:
-        psax_aortic = get_psax_aortic(l_atrium_points, r_atrium_points, aortic_valve_points)
+    if "psax_aortic" in cfg.DATA_OUT.SELECTED_VIEWS:
+        psax_aortic = get_psax_aortic(
+            l_atrium_points, r_atrium_points, aortic_valve_points
+        )
         returned_points4imgs += [psax_aortic]
-    if 'psax_mv' in cfg.DATA_OUT.SELECTED_VIEWS:
+    if "psax_mv" in cfg.DATA_OUT.SELECTED_VIEWS:
         psax_mv = get_psax_mv(vert_vec, heart_com, lv_apex)
         returned_points4imgs += [psax_mv]
-    if 'psax_pm' in cfg.DATA_OUT.SELECTED_VIEWS:
+    if "psax_pm" in cfg.DATA_OUT.SELECTED_VIEWS:
         psax_pm = get_psax_pm(vert_vec, heart_com, lv_apex)
         returned_points4imgs += [psax_pm]
-    if 'psax_lower' in cfg.DATA_OUT.SELECTED_VIEWS:
+    if "psax_lower" in cfg.DATA_OUT.SELECTED_VIEWS:
         psax_lower = get_psax_lower(vert_vec, heart_com, lv_apex)
         returned_points4imgs += [psax_lower]
-    if 'a4c' in cfg.DATA_OUT.SELECTED_VIEWS:
+    if "a4c" in cfg.DATA_OUT.SELECTED_VIEWS:
         a4c = get_a4c(l_atrium_points, r_atrium_points, lv_apex)
         returned_points4imgs += [a4c]
-    if 'a5c' in cfg.DATA_OUT.SELECTED_VIEWS:
+    if "a5c" in cfg.DATA_OUT.SELECTED_VIEWS:
         a5c = get_a5c(l_atrium_points, aortic_valve_points, lv_apex)
         returned_points4imgs += [a5c]
-    if 'a2c' in cfg.DATA_OUT.SELECTED_VIEWS:
+    if "a2c" in cfg.DATA_OUT.SELECTED_VIEWS:
         a2c = get_2ch(cfg, subsampled_mesh, lv_apex)
         returned_points4imgs += [a2c]
 
@@ -396,6 +484,10 @@ def run_slice_extraction(cfg, mesh_path, case_save_path, show_fancyplot=False):
             transformed_mesh = maths_utils.rotate_to_xy_plane(mesh_origin, normal)
             fancy_plot(cfg, transformed_slice, transformed_mesh)
         if case_save_path:
-            save_plane_img(cfg, transformed_slice, os.path.join(case_save_path, str(view_index) + '.png'))
+            save_plane_img(
+                cfg,
+                transformed_slice,
+                os.path.join(case_save_path, str(view_index) + ".png"),
+            )
 
     return
