@@ -1,0 +1,90 @@
+[project]
+name = "epivox"
+version = "1.0.0"
+description = "E-Pix2Vox reconstruction project"
+readme = "README.md"
+license-files = ["LICENSE"]
+authors = [{ name = "David Stojanovski", email = "07dstojanovski@gmail.com" }]
+keywords = ["3d-reconstruction", "voxel", "computer-vision", "deep-learning"]
+requires-python = ">=3.9,<=3.11"
+dependencies = [
+    "numpy>=2.3.4,<3",
+    "pandas>=2.3.3,<3",
+    "tensorboardx>=2.6.4,<3",
+    "matplotlib>=3.10.7,<4",
+    "opencv-python>=4.11.0.86,<5",
+    "scipy>=1.16.3,<2",
+    "scikit-image>=0.25.2,<0.26",
+    "imageio>=2.37.0,<3",
+    "torchvision>=0.24.0,<0.25",
+    "easydict>=1.13,<2",
+    "vtk>=9.5.2,<10",
+    "pyvista>=0.46.3,<0.47",
+    "natsort>=8.4.0,<9",
+    "pyntcloud>=0.3.1,<0.4",
+    "pillow>=12.0.0,<13",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.1.0", "pre-commit>=4.3.0,<5", "pre-commit-hooks>=6.0.0,<7", "pydantic>=2.12,<3"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge", "main"]
+platforms = ["linux-64"]
+
+[build-system]
+requires = ["setuptools>=80.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.ruff]
+line-length = 88
+lint.select = ["ALL"]
+lint.ignore = [
+    "ANN401",
+    "ARG002",
+    "COM812",
+    "D100",
+    "D101",
+    "D104",
+    "D203",
+    "D213",
+    "D400",
+    "D401",
+    "D404",
+    "D413",
+    "D415",
+    "EM101",
+    "EM102",
+    "FA100",
+    "FA102",
+    "FBT001",
+    "FBT002",
+    "FIX002",
+    "G004",
+    "PLR0913",
+    "PYI041",
+    "S311",
+    "S607",
+    "S603",
+    "SIM105",
+    "TRY300",
+    "TRY003",
+    "RET504",
+]
+lint.flake8-annotations = { mypy-init-return = true }
+lint.isort = { force-single-line = true, length-sort = true }
+
+[tool.pixi.tasks]
+lint = "pre-commit run --all-files"
+install-hooks = "pre-commit install"
+
+
+[tool.pixi.pypi-dependencies]
+epivox = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }

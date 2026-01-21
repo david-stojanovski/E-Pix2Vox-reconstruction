@@ -1,0 +1,22 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.2
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^src/
+        types_or: [python, pyi, jupyter]
+      - id: ruff-format
+        files: ^src/
+        types_or: [python, pyi, jupyter]
+
+
+exclude: |
+  (?x)^(
+      \.pixi/.*|
+      \.ruff_cache/.*|
+      epivox\.egg-info/.*|
+      build/.*|
+      dist/.*|
+      \.git/.*
+  )$
